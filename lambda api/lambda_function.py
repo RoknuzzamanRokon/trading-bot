@@ -429,7 +429,9 @@ def lambda_handler(event, context):
         response = getCustomerApiKey(event['queryStringParameters']['customerId'])
     elif httpMethod == getMethod and path == customerApiSecret:
         response = getCustomerApiSecret(event['queryStringParameters']['customerId'])
-
+    elif httpMethod == patchMethod and path == customerPath:
+        requestBody = json.loads(event['body'])
+        response = modifyCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
 
     else:
         response = buildResponse(400, {'message': 'Not Found'})
@@ -439,6 +441,28 @@ def lambda_handler(event, context):
     return response
 
 
+def modifyCustomerInfo(customerId, updateKey, updateValue):
+    try:
+        response = customer_table.update_item(
+            Key={
+                'customerId' : customerId
+            },
+            UpdateExpression = 'set %s = :value' % updateKey,
+            ExpressionAttributeValues={
+                ':value': updateValue
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+        body = {
+            'Operation' : 'UPDATE',
+            'Message' : 'SUCCESS',
+            'UpdatedAttributes' : response
+        }
+        return buildResponse(200, body=body)
+    except Exception as e:
+        error_handle = logger.exception(f'{e}')
+        return error_handle
+    
 
 def getCustomer(customerId):
     try:
