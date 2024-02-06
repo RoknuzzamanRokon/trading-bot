@@ -1,25 +1,22 @@
 import os
-import requests
-import time
-from datetime import datetime, timedelta
-from coinbase_advanced_trader.config import set_api_credentials
-from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell
-from dotenv import load_dotenv
-import boto3
-from decimal import Decimal
 import json
-from custom_encoder import CustomEncoder
+import time
+import boto3
 import logging
 import botocore
+import requests
+from decimal import Decimal
+from custom_encoder import CustomEncoder
+from datetime import datetime, timedelta
+from dotenv import load_dotenv
+from coinbase_advanced_trader.config import set_api_credentials
+from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell
 
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-dynamodbTableName = 'customer-table'
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(dynamodbTableName)
-
+# API resource here. 
 getMethod = 'GET'
 postMethod = 'POST'
 patchMethod = 'PATCH'
@@ -29,25 +26,24 @@ customerPath = '/customer'
 customersPath = '/customers'
 
 
+# Database Connection.
+dynamodb = boto3.resource('dynamodb')
+table_name = 'artmix_tb4_table_01'
+table = dynamodb.Table(table_name)
+
+dynamodb = boto3.resource('dynamodb')
+dynamodbTableName = 'customer-table'
+customer_table = dynamodb.Table(dynamodbTableName)
 
 
-
-
-
-
-
-
-
-
-dynamodb = boto3.client('dynamodb')
-table_name = 'buy_counter_table'
-
+# Environment variable section.
 load_dotenv()
 API_KEY = os.environ.get('API_KEY')
 API_SECRET = os.environ.get('API_SECRET')
 set_api_credentials(API_KEY, API_SECRET)
 
 
+# 
 product_id = "ETH-USD"
 USD_Size = 10
 symbol = 'ETH'
@@ -186,8 +182,6 @@ def calculate_moving_average(prices, window_size):
     moving_average = sum(closing_prices[-window_size:]) / window_size
     return moving_average
 
-
-
 def get_last_60_closing_prices(coin_symbol):
     api_key = API_KEY
 
@@ -243,12 +237,6 @@ def decide_trade_action(rsi_value):
     else:
         return "Hold"
     
-
-# Database Connection.
-dynamodb = boto3.resource('dynamodb')
-table_name = 'artmix_tb4_table_01'
-table = dynamodb.Table(table_name)
-
 
 def update_buy_sell_counter(buy_count,sell_count,total_buy,total_sell,current_price):
     data_to_insert = {
@@ -343,121 +331,107 @@ def lambda_handler(event, context):
     path = event['path']
     
     
-    while running:
-        print("----------------------------------------------------------------------------")
-        # print(f"Total buy: {buy_counter} ")
-        # print(f"Total sell: {sell_counter} \n")
-        buy_check = get_buy_counter()
-        print("Get data form db buy:", buy_check)
-        sell_check = get_sell_counter()
-        print("Get data form db sell:", sell_check)
-        
-        total_buy = get_total_buy()
-        print(f"Total buy: {total_buy}")
-        total_sell = get_total_sell()
-        print(f"Total sell: {total_sell}")
-        
-        get_current_price_db = get_current_price()
-        
-        historical_prices = get_last_month_prices(symbol)
-        moving_average = calculate_moving_average(historical_prices, window_size)
-        print(f'Moving Average: {moving_average}')
-
-        closing_price_result = get_last_day_closing_price(coin_symbol=symbol)
-        print(f"Closing price: {closing_price_result} \n")
-        
-        update_price_result = get_coinbase_price(coin_symbol=symbol)
-        print(f"Current Price: {update_price_result} \n")
-            
-        trade_buy_amount = loss_amount(closing_price_result, LOSS_PERCENTAGE)
-        print(f"Buy Amount Price: {trade_buy_amount}")
-        
-        
-        if buy_check == 0:
-            trade_sell_amount = profit_amount(closing_price_result, PROFIT_PERCENTAGE)
-            print(f"Sell Amount Price: {trade_sell_amount} \n")
-            
-        else:
-            trade_sell_amount = profit_amount(get_current_price_db, PROFIT_PERCENTAGE)
-            print(f"Sell Amount Price: {trade_sell_amount} \n")
-            
+    print("----------------------------------------------------------------------------")
+    # print(f"Total buy: {buy_counter} ")
+    # print(f"Total sell: {sell_counter} \n")
+    buy_check = get_buy_counter()
+    print("Get data form db buy:", buy_check)
+    sell_check = get_sell_counter()
+    print("Get data form db sell:", sell_check)
     
-        
-        closing_prices = get_last_60_closing_prices(coin_symbol=symbol)
+    total_buy = get_total_buy()
+    print(f"Total buy: {total_buy}")
+    total_sell = get_total_sell()
+    print(f"Total sell: {total_sell}")
     
+    get_current_price_db = get_current_price()
+    
+    historical_prices = get_last_month_prices(symbol)
+    moving_average = calculate_moving_average(historical_prices, window_size)
+    print(f'Moving Average: {moving_average}')
 
-        if not isinstance(closing_prices, str):
+    closing_price_result = get_last_day_closing_price(coin_symbol=symbol)
+    print(f"Closing price: {closing_price_result} \n")
+    
+    update_price_result = get_coinbase_price(coin_symbol=symbol)
+    print(f"Current Price: {update_price_result} \n")
+        
+    trade_buy_amount = loss_amount(closing_price_result, LOSS_PERCENTAGE)
+    print(f"Buy Amount Price: {trade_buy_amount}")
+    
+    
+    if buy_check == 0:
+        trade_sell_amount = profit_amount(closing_price_result, PROFIT_PERCENTAGE)
+        print(f"Sell Amount Price: {trade_sell_amount} \n")
+        
+    else:
+        trade_sell_amount = profit_amount(get_current_price_db, PROFIT_PERCENTAGE)
+        print(f"Sell Amount Price: {trade_sell_amount} \n")
+          
+    closing_prices = get_last_60_closing_prices(coin_symbol=symbol)
+
+    if not isinstance(closing_prices, str):
+        
+        rsi = calculate_rsi(closing_prices, window_size_for_rsi)
+        print(f'The RSI for the result candle prices per minute is: {rsi}')
+    
+    
+    if update_price_result is not None:
+        update_price_float = float(update_price_result)
+        if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
             
-            rsi = calculate_rsi(closing_prices, window_size_for_rsi)
-            print(f'The RSI for the result candle prices per minute is: {rsi}')
-        
-        
-        if update_price_result is not None:
-            update_price_float = float(update_price_result)
-            if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
-                
-                # trade_based_on_fgi_simple(product_id, btc_size)
+            # trade_based_on_fgi_simple(product_id, btc_size)
 
-                print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
-                buy_counter += 1
+            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
+            buy_counter += 1
 
-                total_buy += 1
-                total_sell += 0
-                
-                current_price = get_coinbase_price(coin_symbol=symbol)
-                print(type(current_price))
-
-                set_buy = 1
-                set_sell = 0
-                update_buy_sell_counter(set_buy, set_sell, total_buy, total_sell, current_price)
-                # update_buy_sell_counter(set_buy, set_sell,buy_price,sell_price)
-
-
-            # elif sell_counter < max_sell and total_buy <= max_buy and rsi >= 70:
-                
-            #     fiat_limit_sell(product_id, btc_size)
-            #     print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-            #     sell_counter += 1
-
-            #     reset_buy = 0
-            #     reset_sell = 0
-            #     update_buy_sell_counter(reset_buy, reset_sell)
-
-
-            elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
-                
-                # fiat_limit_sell(product_id, sell_btc_size)
-                print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                sell_counter += 1
-
-                total_buy += 0
-                total_sell += 1
-
-                reset_buy = 0
-                reset_sell = 0
-                reset_current_price = 0
-                update_buy_sell_counter(reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
-
-
-
-            elif sell_counter == max_sell and buy_counter == max_buy:
-                running = False
-        else:
-            print('Skipping due to an error in obtaining the current price.')
-        
-        
-        if httpMethod == getMethod and path == healthPath:
-            response = buildResponse(200)
-        elif httpMethod == postMethod and path == customerPath:
-            response = saveCustomer(json.loads(event['body']))
-        elif httpMethod == getMethod and path == customerPath:
-            response = getCustomer(event['queryStringParameters']['customerId'])
+            total_buy += 1
+            total_sell += 0
             
-        else:
-            response = buildResponse(400, {'message': 'Not Found'})
+            current_price = get_coinbase_price(coin_symbol=symbol)
+            print(type(current_price))
+
+            set_buy = 1
+            set_sell = 0
+            update_buy_sell_counter(set_buy, set_sell, total_buy, total_sell, current_price)
+            # update_buy_sell_counter(set_buy, set_sell,buy_price,sell_price)
+
+
+        elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
+            
+            # fiat_limit_sell(product_id, sell_btc_size)
+            print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+            sell_counter += 1
+
+            total_buy += 0
+            total_sell += 1
+
+            reset_buy = 0
+            reset_sell = 0
+            reset_current_price = 0
+            update_buy_sell_counter(reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
+
+        elif sell_counter == max_sell and buy_counter == max_buy:
+            running = False
+    else:
+        print('Skipping due to an error in obtaining the current price.')
+
+
+
+        # This is API section.
+    
+    if httpMethod == getMethod and path == healthPath:
+        response = buildResponse(200)
+    elif httpMethod == postMethod and path == customerPath:
+        response = saveCustomer(json.loads(event['body']))
+    elif httpMethod == getMethod and path == customerPath:
+        response = getCustomer(event['queryStringParameters']['customerId'])
         
-        time.sleep(update_time)
-        
+    else:
+        response = buildResponse(400, {'message': 'Not Found'})
+    
+    time.sleep(update_time)
+    
     return response
 
 
@@ -465,7 +439,7 @@ def lambda_handler(event, context):
 def getCustomer(customerId):
     try:
         customerId = int(customerId)
-        response = table.get_item(
+        response = customer_table.get_item(
             Key={
                 'customerId': customerId
             }
@@ -481,7 +455,7 @@ def getCustomer(customerId):
 
 def saveCustomer(requestBody):
     try:
-        table.put_item(Item=requestBody)
+        customer_table.put_item(Item=requestBody)
         body = {
             'Operation': 'SAVE',
             'Message': 'SUCCESS',
