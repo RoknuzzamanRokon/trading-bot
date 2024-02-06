@@ -24,6 +24,8 @@ deleteMethod = 'DELETE'
 healthPath = '/health'
 customerPath = '/customer'
 customersPath = '/customers'
+customerApiKey = '/customer/api-key'
+customerApiSecret = '/customer/api-secret'
 
 
 # Database Connection.
@@ -44,17 +46,16 @@ set_api_credentials(API_KEY, API_SECRET)
 
 
 # 
-product_id = "ETH-USD"
 USD_Size = 10
 symbol = 'ETH'
+product_id = f"{symbol}-USD"
+
 
 max_buy = 10
 max_sell = 10
 
 PROFIT_PERCENTAGE = 0.71
 LOSS_PERCENTAGE = 0.70
-
-
 
 
 update_time = 5
@@ -330,7 +331,6 @@ def lambda_handler(event, context):
     httpMethod = event['httpMethod']
     path = event['path']
     
-    
     print("----------------------------------------------------------------------------")
     # print(f"Total buy: {buy_counter} ")
     # print(f"Total sell: {sell_counter} \n")
@@ -394,8 +394,7 @@ def lambda_handler(event, context):
             set_buy = 1
             set_sell = 0
             update_buy_sell_counter(set_buy, set_sell, total_buy, total_sell, current_price)
-            # update_buy_sell_counter(set_buy, set_sell,buy_price,sell_price)
-
+           
 
         elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
             
@@ -418,7 +417,7 @@ def lambda_handler(event, context):
 
 
 
-        # This is API section.
+    # This is API section.
     
     if httpMethod == getMethod and path == healthPath:
         response = buildResponse(200)
@@ -426,7 +425,12 @@ def lambda_handler(event, context):
         response = saveCustomer(json.loads(event['body']))
     elif httpMethod == getMethod and path == customerPath:
         response = getCustomer(event['queryStringParameters']['customerId'])
-        
+    elif httpMethod == getMethod and path == customerApiKey:
+        response = getCustomerApiKey(event['queryStringParameters']['customerId'])
+    elif httpMethod == getMethod and path == customerApiSecret:
+        response = getCustomerApiSecret(event['queryStringParameters']['customerId'])
+
+
     else:
         response = buildResponse(400, {'message': 'Not Found'})
     
@@ -483,3 +487,80 @@ def buildResponse(statusCode, body=None):
     if body is not None:
         response['body'] = json.dumps(body, cls=CustomEncoder)
     return response
+
+
+
+def getCustomerApiKey(customerId):
+    try:
+        customerId = int(customerId)
+        response = customer_table.get_item(
+            Key={
+                'customerId': customerId
+            }
+        )
+        if 'Item' in response:
+            customer_data = response['Item']
+            api_key = customer_data.get('apiKey')
+            
+            if api_key is not None:
+                return buildResponse(200, api_key)
+            else:
+                return buildResponse(400, {'Message': 'API key not found for customerId: %s' % customerId})
+        else:
+            return buildResponse(400, {'Message': 'customerId: %s not found' % customerId})
+    except Exception as e:
+        error_handle = logger.exception(f"{e}")
+        return error_handle
+
+
+
+def getCustomerApiSecret(customerId):
+    try:
+        customerId = int(customerId)
+        response = customer_table.get_item(
+            Key={
+                'customerId': customerId
+            }
+        )
+        if 'Item' in response:
+            customer_data = response['Item']
+            api_secret = customer_data.get('apiSecret')
+            
+            if api_secret is not None:
+                return buildResponse(200, api_secret)
+            else:
+                return buildResponse(400, {'Message': 'API key not found for customerId: %s' % customerId})
+        else:
+            return buildResponse(400, {'Message': 'customerId: %s not found' % customerId})
+    except Exception as e:
+        error_handle = logger.exception(f"{e}")
+        return error_handle
+
+# def getCustomerApiSecret(customerId):
+#     try:
+#         customerId = int(customerId)
+#         response = customer_table.get_item(
+#             Key={
+#                 'customerId': customerId
+#             }
+#         )
+#         if 'Item' in response:
+#             customer_data = response.get('Item', {})
+#             api_secret = customer_data.get('apiSecret')
+#             return buildResponse(200, {api_secret})
+#         else:
+#             return buildResponse(400, {'Message': 'customerId: %s not found' % customerId})
+#     except Exception as e:
+#         error_handle = logger.exception(f"{e}")
+#         return error_handle
+    
+
+
+
+
+
+
+
+
+
+
