@@ -247,7 +247,25 @@ def update_buy_sell_counter(buy_count,sell_count,total_buy,total_sell,current_pr
         response = table.put_item(Item=data_to_insert)
         return response
     except Exception as e:
-        print(f"Error updating buy counter: {e}")
+        print(f"Error updating buy sell counter: {e}")
+        return None
+    
+def update_bot_output(moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi):
+    data_to_insert = {
+        'display_id': 1,
+        'moving_average_price': str(moving_average),
+        'closing_price_result': str(closing_price_result),
+        'update_price_result': str(update_price_result),
+        'trade_buy_amount': str(trade_buy_amount),
+        'trade_sell_amount': str(trade_sell_amount),
+        'rsi_value': Decimal(rsi),
+
+    }
+    try:
+        response = bot_output_table.put_item(Item=data_to_insert)
+        return response
+    except Exception as e:
+        print(f"Error updating bot output")
         return None
 
 def get_buy_counter():
