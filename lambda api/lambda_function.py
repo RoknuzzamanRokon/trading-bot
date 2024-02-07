@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from coinbase_advanced_trader.config import set_api_credentials
 from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell
-from boto3.dynamodb.conditions import Key
+from boto3.dynamodb.conditions import Attr,Key
 
 
 logger = logging.getLogger()
@@ -427,6 +427,9 @@ def lambda_handler(event, context):
 
     elif httpMethod == postMethod and path == orderConfigPath:
         response = saveOrderConfig(json.loads(event['body']))
+    elif httpMethod == getMethod and path == orderConfigPath:
+        response = getOrderConfig(event['queryStringParameters']['customerId'], event['queryStringParameters']['attributeToSearch'])
+
 
     else:
         response = buildResponse(400, {'message': 'Not Found'})
@@ -509,36 +512,6 @@ def saveCustomer(requestBody):
         return buildResponse(500, body=body)
 
 
-def saveOrderConfig(requestBody):
-    try:
-        # Convert numeric values to Decimal 
-        requestBody["customerId"] = int(requestBody["customerId"])
-        requestBody["symbol"] = str(requestBody["symbol"])
-        requestBody["product_id"] = str(requestBody["product_id"])
-        requestBody["usd_size"] = Decimal(str(requestBody["usd_size"]))
-        requestBody["max_buy"] = Decimal(str(requestBody["max_buy"]))
-        requestBody["max_sell"] = Decimal(str(requestBody["max_sell"]))
-        requestBody["PROFIT_PERCENTAGE"] = Decimal(str(requestBody["PROFIT_PERCENTAGE"]))
-        requestBody["LOSS_PERCENTAGE"] = Decimal(str(requestBody["LOSS_PERCENTAGE"]))
-
-        # Put the item into DynamoDB
-        order_configuration_table.put_item(Item=requestBody)
-
-        body = {
-            'Operation': 'SAVE',
-            'Message': 'SUCCESS',
-            'Item': requestBody
-        }
-        return buildResponse(200, body=body)
-    except Exception as e:
-        logger.exception(f"{e}")
-        body = {
-            'Operation': 'SAVE',
-            'Message': 'FAILED',
-            'Error': str(e)
-        }
-        return buildResponse(500, body=body)
-
 def buildResponse(statusCode, body=None):
     response = {
         'statusCode': statusCode,
@@ -550,7 +523,6 @@ def buildResponse(statusCode, body=None):
     if body is not None:
         response['body'] = json.dumps(body, cls=CustomEncoder)
     return response
-
 
 
 def getCustomerApiKey(customerId):
@@ -600,12 +572,53 @@ def getCustomerApiSecret(customerId):
         return error_handle
 
 
+def saveOrderConfig(requestBody):
+    try:
+        # Convert numeric values to Decimal 
+        requestBody["customerId"] = int(requestBody["customerId"])
+        requestBody["symbol"] = str(requestBody["symbol"])
+        requestBody["product_id"] = str(requestBody["product_id"])
+        requestBody["usd_size"] = Decimal(str(requestBody["usd_size"]))
+        requestBody["max_buy"] = Decimal(str(requestBody["max_buy"]))
+        requestBody["max_sell"] = Decimal(str(requestBody["max_sell"]))
+        requestBody["PROFIT_PERCENTAGE"] = Decimal(str(requestBody["PROFIT_PERCENTAGE"]))
+        requestBody["LOSS_PERCENTAGE"] = Decimal(str(requestBody["LOSS_PERCENTAGE"]))
 
+        # Put the item into DynamoDB
+        order_configuration_table.put_item(Item=requestBody)
 
+        body = {
+            'Operation': 'SAVE',
+            'Message': 'SUCCESS',
+            'Item': requestBody
+        }
+        return buildResponse(200, body=body)
+    except Exception as e:
+        logger.exception(f"{e}")
+        body = {
+            'Operation': 'SAVE',
+            'Message': 'FAILED',
+            'Error': str(e)
+        }
+        return buildResponse(500, body=body)
+    
 
+def getOrderConfig(customerId, attribute_to_search):
+    try:
+        customerId = int(customerId)
+        response = order_configuration_table.get_item(
+            Key={'customerId': customerId}
+        )
+        if 'Item' in response:
+            order_config = response['Item']
+            data = order_config.get(attribute_to_search)
 
-
-
-
-
-
+            if data is not None:
+                return buildResponse(200, data)
+            else:
+                return buildResponse(404, {'Message': f'Attribute not found for customerId: {customerId}'})
+        else:
+            return buildResponse(404, {'Message': f'Item not found for customerId: {customerId}'})
+    except Exception as e:
+        logger.exception(f"{e}")
+        return buildResponse(500, {'Message': 'Failed to retrieve item'})
