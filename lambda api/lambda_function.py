@@ -29,6 +29,8 @@ customer_table = dynamodb.Table(table_2)
 table_3 = 'order-configuration-table'
 order_configuration_table = dynamodb.Table(table_3)
 
+table_4 = 'bot-output-table'
+bot_output_table = dynamodb.Table(table_4)
 
 # Environment variable section.
 load_dotenv()
