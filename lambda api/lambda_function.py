@@ -11,31 +11,23 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from coinbase_advanced_trader.config import set_api_credentials
 from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell
+from boto3.dynamodb.conditions import Key
 
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# API resource here. 
-getMethod = 'GET'
-postMethod = 'POST'
-patchMethod = 'PATCH'
-deleteMethod = 'DELETE'
-healthPath = '/health'
-customerPath = '/customer'
-customersPath = '/customers'
-customerApiKey = '/customer/api-key'
-customerApiSecret = '/customer/api-secret'
-
 
 # Database Connection.
 dynamodb = boto3.resource('dynamodb')
-table_name = 'artmix_tb4_table_01'
-table = dynamodb.Table(table_name)
+table_1 = 'artmix_tb4_table_01'
+table = dynamodb.Table(table_1)
 
-dynamodb = boto3.resource('dynamodb')
-dynamodbTableName = 'customer-table'
-customer_table = dynamodb.Table(dynamodbTableName)
+table_2 = 'customer-table'
+customer_table = dynamodb.Table(table_2)
+
+table_3 = 'order-configuration-table'
+order_configuration_table = dynamodb.Table(table_3)
 
 
 # Environment variable section.
@@ -45,7 +37,6 @@ API_SECRET = os.environ.get('API_SECRET')
 set_api_credentials(API_KEY, API_SECRET)
 
 
-# 
 USD_Size = 10
 symbol = 'ETH'
 product_id = f"{symbol}-USD"
@@ -417,6 +408,7 @@ def lambda_handler(event, context):
 
 
 
+
     # This is API section.
     
     if httpMethod == getMethod and path == healthPath:
@@ -433,12 +425,29 @@ def lambda_handler(event, context):
         requestBody = json.loads(event['body'])
         response = modifyCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
 
+    elif httpMethod == postMethod and path == orderConfigPath:
+        response = saveOrderConfig(json.loads(event['body']))
+
     else:
         response = buildResponse(400, {'message': 'Not Found'})
     
     time.sleep(update_time)
     
     return response
+
+# API resource here. 
+getMethod = 'GET'
+postMethod = 'POST'
+patchMethod = 'PATCH'
+deleteMethod = 'DELETE'
+
+healthPath = '/health'
+customerPath = '/customer'
+customersPath = '/customers'
+customerApiKey = '/customer/api-key'
+customerApiSecret = '/customer/api-secret'
+
+orderConfigPath = '/orderConfiguration'
 
 
 def modifyCustomerInfo(customerId, updateKey, updateValue):
@@ -500,6 +509,36 @@ def saveCustomer(requestBody):
         return buildResponse(500, body=body)
 
 
+def saveOrderConfig(requestBody):
+    try:
+        # Convert numeric values to Decimal 
+        requestBody["customerId"] = int(requestBody["customerId"])
+        requestBody["symbol"] = str(requestBody["symbol"])
+        requestBody["product_id"] = str(requestBody["product_id"])
+        requestBody["usd_size"] = Decimal(str(requestBody["usd_size"]))
+        requestBody["max_buy"] = Decimal(str(requestBody["max_buy"]))
+        requestBody["max_sell"] = Decimal(str(requestBody["max_sell"]))
+        requestBody["PROFIT_PERCENTAGE"] = Decimal(str(requestBody["PROFIT_PERCENTAGE"]))
+        requestBody["LOSS_PERCENTAGE"] = Decimal(str(requestBody["LOSS_PERCENTAGE"]))
+
+        # Put the item into DynamoDB
+        order_configuration_table.put_item(Item=requestBody)
+
+        body = {
+            'Operation': 'SAVE',
+            'Message': 'SUCCESS',
+            'Item': requestBody
+        }
+        return buildResponse(200, body=body)
+    except Exception as e:
+        logger.exception(f"{e}")
+        body = {
+            'Operation': 'SAVE',
+            'Message': 'FAILED',
+            'Error': str(e)
+        }
+        return buildResponse(500, body=body)
+
 def buildResponse(statusCode, body=None):
     response = {
         'statusCode': statusCode,
@@ -560,24 +599,6 @@ def getCustomerApiSecret(customerId):
         error_handle = logger.exception(f"{e}")
         return error_handle
 
-# def getCustomerApiSecret(customerId):
-#     try:
-#         customerId = int(customerId)
-#         response = customer_table.get_item(
-#             Key={
-#                 'customerId': customerId
-#             }
-#         )
-#         if 'Item' in response:
-#             customer_data = response.get('Item', {})
-#             api_secret = customer_data.get('apiSecret')
-#             return buildResponse(200, {api_secret})
-#         else:
-#             return buildResponse(400, {'Message': 'customerId: %s not found' % customerId})
-#     except Exception as e:
-#         error_handle = logger.exception(f"{e}")
-#         return error_handle
-    
 
 
 
