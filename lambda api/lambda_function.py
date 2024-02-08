@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 from coinbase_advanced_trader.config import set_api_credentials
 from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell
 from boto3.dynamodb.conditions import Attr,Key
+import math
 
 
 logger = logging.getLogger()
@@ -253,19 +254,18 @@ def update_buy_sell_counter(buy_count,sell_count,total_buy,total_sell,current_pr
 def update_bot_output(moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi):
     data_to_insert = {
         'display_id': 1,
-        'moving_average_price': str(moving_average),
-        'closing_price_result': str(closing_price_result),
+        'moving_average_price': Decimal(str(moving_average)),
+        'closing_price_result': Decimal(str(closing_price_result)),
         'update_price_result': str(update_price_result),
-        'trade_buy_amount': str(trade_buy_amount),
-        'trade_sell_amount': str(trade_sell_amount),
-        'rsi_value': Decimal(rsi),
-
+        'trade_buy_amount': Decimal(str(trade_buy_amount)),
+        'trade_sell_amount': Decimal(str(trade_sell_amount)),
+        'rsi_value': Decimal(str(rsi)),
     }
     try:
         response = bot_output_table.put_item(Item=data_to_insert)
         return response
     except Exception as e:
-        print(f"Error updating bot output")
+        print(f"Error updating bot output {e}")
         return None
 
 def get_buy_counter():
@@ -386,7 +386,28 @@ def lambda_handler(event, context):
         rsi = calculate_rsi(closing_prices, window_size_for_rsi)
         print(f'The RSI for the result candle prices per minute is: {rsi}')
     
+    # Rounded all value in 2 decimal places.
+    print(type(moving_average))
+    print(type(closing_price_result))
+    print(type(trade_buy_amount))
+    print(type(trade_sell_amount))
+    print(type(rsi))
     
+    round_moving_average = round(moving_average, 2)
+    print(type(round_moving_average))
+    round_closing_price_result = round(closing_price_result, 2)
+    print(type(round_closing_price_result))
+    round_trade_buy_amount = round(trade_buy_amount, 2)
+    print(type(round_trade_buy_amount))
+    round_trade_sell_amount = round(trade_sell_amount, 2)
+    print(type(round_trade_sell_amount))
+    round_rsi = round(rsi, 2)
+    print(type(round_rsi))
+    
+    # Bot output update in database.
+    update_bot_output(moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+                       update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, trade_sell_amount=round_trade_sell_amount, rsi=round_rsi)
+
     if update_price_result is not None:
         update_price_float = float(update_price_result)
         if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
