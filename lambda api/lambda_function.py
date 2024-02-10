@@ -10,7 +10,7 @@ from custom_encoder import CustomEncoder
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from coinbase_advanced_trader.config import set_api_credentials
-from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell
+from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell, fiat_limit_buy
 from boto3.dynamodb.conditions import Attr,Key
 import math
 
@@ -26,7 +26,7 @@ API_SECRET = os.environ.get('API_SECRET')
 
 # Database Connection.
 dynamodb = boto3.resource('dynamodb')
-table_1 = 'artmix_tb4_table_01'
+table_1 = 'counter-table'
 table = dynamodb.Table(table_1)
 
 table_2 = 'customer-table'
@@ -369,6 +369,7 @@ def lambda_handler(event, context):
         
     if symbol_str_strip == 'ETH':
         symbol = symbol_str_strip
+        
         print("----------------------------------------------------------------------------")
         buy_check = get_buy_counter()
         print("Get data form db buy:", buy_check)
@@ -396,6 +397,7 @@ def lambda_handler(event, context):
         trade_buy_amount = loss_amount(closing_price_result, LOSS_PERCENTAGE)
         print(f"Buy Amount Price: {trade_buy_amount}")
         
+       
         
         if buy_check == 0:
             trade_sell_amount = profit_amount(closing_price_result, PROFIT_PERCENTAGE)
@@ -430,7 +432,7 @@ def lambda_handler(event, context):
             update_price_float = float(update_price_result)
             if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
                 
-                # trade_based_on_fgi_simple(product_id, btc_size)
+                # fiat_limit_buy(product_id, btc_size)
 
                 print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                 buy_counter += 1
@@ -486,6 +488,9 @@ def lambda_handler(event, context):
         response = saveOrderConfig(json.loads(event['body']))
     elif httpMethod == getMethod and path == orderConfigPath:
         response = getOrderConfig(event['queryStringParameters']['customerId'], event['queryStringParameters']['attributeToSearch'])
+    
+    elif httpMethod == getMethod and path == botOutputPath:
+        response = getBotResult(event['queryStringParameters']['display_id'])
 
     else:
         response = buildResponse(400, {'message': 'Not Found'})
@@ -550,6 +555,23 @@ def getCustomer(customerId):
         error_handle = logger.exception(f"{e}")
         return error_handle
 
+
+def getBotResult(display_id):
+    try:
+        display_id = int(display_id)
+        response = bot_output_table.get_item(
+            Key={
+                'display_id': display_id
+            }
+        )
+        if 'Item' in response:
+            return buildResponse(200, response['Item'])
+        else:
+            return buildResponse(400, {'Message': 'customerId: %s not found' % display_id})
+    except Exception as e:
+        error_handle = logger.exception(f"{e}")
+        return error_handle
+    
 
 def saveCustomer(requestBody):
     try:
