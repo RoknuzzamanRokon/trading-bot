@@ -269,18 +269,18 @@ def update_bot_output(moving_average, closing_price_result, update_price_result,
         print(f"Error updating bot output {e}")
         return None
 
-def get_buy_counter():
+def get_buy_counter(customerId):
     try:
-        response = table.get_item(Key={'counter_id': 1})
+        response = table.get_item(Key={'counter_id': customerId})
         item = response.get('Item', {})
         return item.get('buy_counter')
     except Exception as e:
         print(f"Error retrieving buy counter: {e}")
         return 0
         
-def get_sell_counter():
+def get_sell_counter(customerId):
     try:
-        response = table.get_item(Key={'counter_id': 1})
+        response = table.get_item(Key={'counter_id': customerId})
         item = response.get('Item', {})
         return item.get('sell_counter', 0)
     except Exception as e:
@@ -336,8 +336,8 @@ def get_current_price():
 def lambda_handler(event, context):
     global buy_counter, sell_counter, running, max_buy, max_sell, update_time, buy_counter_db, window_size_for_rsi, btc_size, sell_btc_size, window_size
     
-    buy_check = get_buy_counter()
-    sell_check = get_sell_counter()
+    buy_check = get_buy_counter(customerId=1)
+    sell_check = get_sell_counter(customerId=1)
     
     logger.info(event)
     httpMethod = event['httpMethod']
@@ -367,13 +367,13 @@ def lambda_handler(event, context):
         # print(type(symbol_str))
         symbol_str_strip = symbol_str.strip('\"')
         
-    if symbol_str_strip == 'ETH':
+    if symbol_str_strip == 'ETH': # Add hare 'product_id,api_key
         symbol = symbol_str_strip
         
         print("----------------------------------------------------------------------------")
-        buy_check = get_buy_counter()
+        buy_check = get_buy_counter(customerId=1)
         print("Get data form db buy:", buy_check)
-        sell_check = get_sell_counter()
+        sell_check = get_sell_counter(customerId=1)
         print("Get data form db sell:", sell_check)
         
         total_buy = get_total_buy()
