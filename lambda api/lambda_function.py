@@ -49,8 +49,6 @@ symbol = 'ETH'
 product_id = f"{symbol}-USD"
 
 
-max_buy = 10
-max_sell = 10
 
 
 update_time = 5
@@ -398,7 +396,24 @@ def lambda_handler(event, context):
     if 'body' in loss_count:
         symbol_str = loss_count['body']
         loss_count_strip = symbol_str.strip('\"')
-    
+
+    max_buy_count = getOrderConfig(customerId='1', attributeToSearch='max_buy')
+    if 'body' in max_buy_count:
+        symbol_str = max_buy_count['body']
+        max_buy_count_strip = symbol_str.strip('\"')
+        float_max_buy_count_strip = float(max_buy_count_strip)
+
+
+    max_sell_count = getOrderConfig(customerId='1', attributeToSearch='max_sell')
+    if 'body' in max_sell_count:
+        symbol_str = max_sell_count['body']
+        max_sell_count_strip = symbol_str.strip('\"')
+        float_max_sell_count_strip = float(max_sell_count_strip)
+
+
+
+    max_buy = float_max_buy_count_strip
+    max_sell = float_max_sell_count_strip
 
 
     USD_Size = getOrderConfig(customerId='1', attributeToSearch='usd_size')
@@ -411,6 +426,13 @@ def lambda_handler(event, context):
     print(USD_Size)
     btc_size = float(USD_Size)
     sell_btc_size = btc_size + 0.06
+
+
+
+
+
+
+
 
 
 
@@ -554,7 +576,7 @@ def lambda_handler(event, context):
         total_sell = get_total_sell(customerId=1)
         print(f"Total sell: {total_sell}")
         
-        get_current_price_db = get_current_price(customerId=1)
+        get_current_price_db = get_current_price(customerId="1")
         
         historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
         print(type(historical_prices))
@@ -888,7 +910,7 @@ def getCustomerApiSecret(customerId):
     
 def getBotResult(display_id):
     try:
-        display_id = int(display_id)
+        display_id = str(display_id)
         response = bot_output_table.get_item(
             Key={
                 'display_id': display_id
