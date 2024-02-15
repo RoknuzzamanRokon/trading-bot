@@ -43,7 +43,8 @@ bot_output_table = dynamodb.Table(table_4)
 
 
 
-USD_Size = 10
+
+
 symbol = 'ETH'
 product_id = f"{symbol}-USD"
 
@@ -53,13 +54,11 @@ max_sell = 10
 
 
 update_time = 5
-btc_size = int(USD_Size)
 running = True
 sell_counter = 0
 buy_counter = 0
 window_size = 8
 window_size_for_rsi = 14 
-sell_btc_size = btc_size + 0.06
 
 buy_counter_db = 0
 
@@ -380,18 +379,15 @@ def lambda_handler(event, context):
         api_secret_body = api_secret['body']
         api_secret_body_strip = api_secret_body.strip('\"')
 
-
     symbol_01 = getOrderConfig(customerId='1', attributeToSearch='symbol')
     if 'body' in symbol_01:
         symbol_str = symbol_01['body']
         symbol_str_strip = symbol_str.strip('\"')
 
-
     product_id_01 = getOrderConfig(customerId='1', attributeToSearch='product_id')
     if 'body' in product_id_01:
         symbol_str = product_id_01['body']
         product_id_str_strip = symbol_str.strip('\"')
-
 
     profit_count = getOrderConfig(customerId='1', attributeToSearch='PROFIT_PERCENTAGE')
     if 'body' in profit_count:
@@ -405,9 +401,17 @@ def lambda_handler(event, context):
     
 
 
+    USD_Size = getOrderConfig(customerId='1', attributeToSearch='usd_size')
+    if 'body' in USD_Size:
+        symbol_str = USD_Size['body']
+        USD_Size_strip = symbol_str.strip('\"')
+    
+    print(type(USD_Size_strip))
+    print(USD_Size_strip)
 
-
-
+    USD_Size = 10
+    btc_size = int(USD_Size)
+    sell_btc_size = btc_size + 0.06
 
 
 
