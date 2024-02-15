@@ -406,11 +406,10 @@ def lambda_handler(event, context):
         symbol_str = USD_Size['body']
         USD_Size_strip = symbol_str.strip('\"')
     
-    print(type(USD_Size_strip))
-    print(USD_Size_strip)
 
-    USD_Size = 10
-    btc_size = int(USD_Size)
+    USD_Size = float(USD_Size_strip)
+    print(USD_Size)
+    btc_size = float(USD_Size)
     sell_btc_size = btc_size + 0.06
 
 
