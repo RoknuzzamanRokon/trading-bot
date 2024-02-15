@@ -51,9 +51,6 @@ product_id = f"{symbol}-USD"
 max_buy = 10
 max_sell = 10
 
-PROFIT_PERCENTAGE = 0.71
-LOSS_PERCENTAGE = 0.70
-
 
 update_time = 5
 btc_size = int(USD_Size)
@@ -168,8 +165,6 @@ def loss_amount(ia, lp):
         print(f'Error converting ia to float in loss_amount')
         return None
     
-
-# Eglake bahire rakha jabe na.
 def get_last_month_prices(coin_symbol, api_key):
     end_time = datetime.utcnow()
     
@@ -276,9 +271,10 @@ def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell
         print(f"Error updating buy sell counter: {e}")
         return None
     
-def update_bot_output(moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi):
+def update_bot_output(customerId, moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi):
+    customerId = str(customerId)
     data_to_insert = {
-        'display_id': 1,
+        'display_id': customerId,
         'moving_average_price': Decimal(str(moving_average)),
         'closing_price_result': Decimal(str(closing_price_result)),
         'update_price_result': str(update_price_result),
@@ -370,6 +366,9 @@ def lambda_handler(event, context):
     httpMethod = event['httpMethod']
     path = event['path']
     
+
+
+    
     api_key = getCustomerApiKey(customerId="1")
     if 'body' in api_key:
         api_key_body = api_key['body']
@@ -392,7 +391,27 @@ def lambda_handler(event, context):
     if 'body' in product_id_01:
         symbol_str = product_id_01['body']
         product_id_str_strip = symbol_str.strip('\"')
+
+
+    profit_count = getOrderConfig(customerId='1', attributeToSearch='PROFIT_PERCENTAGE')
+    if 'body' in profit_count:
+        symbol_str = profit_count['body']
+        profit_count_strip = symbol_str.strip('\"')
+
+    loss_count = getOrderConfig(customerId='1', attributeToSearch='LOSS_PERCENTAGE')
+    if 'body' in loss_count:
+        symbol_str = loss_count['body']
+        loss_count_strip = symbol_str.strip('\"')
     
+
+
+
+
+
+
+
+
+
     buy_check = get_buy_counter(customerId="1")
     sell_check = get_sell_counter(customerId="1")
     
@@ -433,18 +452,21 @@ def lambda_handler(event, context):
         
         update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
         print(f"Current Price: {update_price_result} \n")
-            
-        trade_buy_amount = loss_amount(closing_price_result, LOSS_PERCENTAGE)
+
+        profit_count_strip_int = float(profit_count_strip)
+        loss_count_strip_int = float(loss_count_strip)   
+
+        trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
         print(f"Buy Amount Price: {trade_buy_amount}")
         
        
         
         if buy_check == 0:
-            trade_sell_amount = profit_amount(closing_price_result, PROFIT_PERCENTAGE)
+            trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
             print(f"Sell Amount Price: {trade_sell_amount} \n")
             
         else:
-            trade_sell_amount = profit_amount(get_current_price_db, PROFIT_PERCENTAGE)
+            trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
             print(f"Sell Amount Price: {trade_sell_amount} \n")
             
         closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
@@ -454,6 +476,7 @@ def lambda_handler(event, context):
             rsi = calculate_rsi(closing_prices, window_size_for_rsi)
             print(f'The RSI for the result candle prices per minute is: {rsi}')
         
+        customerId = "1"
         # Rounded all value in 2 decimal places.
         round_moving_average = round(moving_average, 2)
         round_closing_price_result = round(closing_price_result, 2)
@@ -462,7 +485,7 @@ def lambda_handler(event, context):
         round_rsi = round(rsi, 2)
         
         # Bot output update in database.
-        update_bot_output(moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+        update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
                         update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, trade_sell_amount=round_trade_sell_amount, rsi=round_rsi)
         
         
@@ -541,17 +564,17 @@ def lambda_handler(event, context):
         update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
         print(f"Current Price: {update_price_result} \n")
             
-        trade_buy_amount = loss_amount(closing_price_result, LOSS_PERCENTAGE)
+        trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
         print(f"Buy Amount Price: {trade_buy_amount}")
         
        
         
         if buy_check == 0:
-            trade_sell_amount = profit_amount(closing_price_result, PROFIT_PERCENTAGE)
+            trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
             print(f"Sell Amount Price: {trade_sell_amount} \n")
             
         else:
-            trade_sell_amount = profit_amount(get_current_price_db, PROFIT_PERCENTAGE)
+            trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
             print(f"Sell Amount Price: {trade_sell_amount} \n")
             
         closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
@@ -561,6 +584,7 @@ def lambda_handler(event, context):
             rsi = calculate_rsi(closing_prices, window_size_for_rsi)
             print(f'The RSI for the result candle prices per minute is: {rsi}')
         
+        customerId = "1"
         # Rounded all value in 2 decimal places.
         round_moving_average = round(moving_average, 2)
         round_closing_price_result = round(closing_price_result, 2)
@@ -569,7 +593,7 @@ def lambda_handler(event, context):
         round_rsi = round(rsi, 2)
         
         # Bot output update in database.
-        update_bot_output(moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+        update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
                         update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, trade_sell_amount=round_trade_sell_amount, rsi=round_rsi)
         
         
