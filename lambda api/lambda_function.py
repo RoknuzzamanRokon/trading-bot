@@ -389,7 +389,7 @@ def lambda_handler(event, context):
 
 
     # Scan the table to retrieve all customer IDs
-    response = order_configuration_table.scan(ProjectionExpression='customerId')
+    response = customer_table.scan(ProjectionExpression='customerId')
 
     # Extract and print the customer IDs
     customer_ids = [item['customerId'] for item in response.get('Items', [])]
@@ -424,6 +424,7 @@ def lambda_handler(event, context):
             if 'body' in profit_count:
                 symbol_str = profit_count['body']
                 profit_count_strip = symbol_str.strip('\"')
+                profit_count_strip_int = float(profit_count_strip)
 
             loss_count = getOrderConfig(customerId=customer_id, attributeToSearch='LOSS_PERCENTAGE')
             if 'body' in loss_count:
@@ -507,7 +508,7 @@ def lambda_handler(event, context):
                 update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
                 print(f"Current Price: {update_price_result} \n")
 
-                profit_count_strip_int = float(profit_count_strip)
+                
                    
 
                 trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
@@ -606,6 +607,16 @@ def lambda_handler(event, context):
                 print(f"Total buy: {total_buy}")
                 total_sell = get_total_sell(customerId=customer_id)
                 print(f"Total sell: {total_sell}")
+
+                if buy_check is None: 
+                    customerId=customer_id
+                    set_buy=0
+                    set_sell=0
+                    total_buy=0
+                    total_sell=0
+                    current_price=0
+                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
+                    
                 
                 get_current_price_db = get_current_price(customerId=customer_id)
                 
