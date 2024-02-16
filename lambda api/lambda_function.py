@@ -43,14 +43,6 @@ bot_output_table = dynamodb.Table(table_4)
 
 
 
-
-
-symbol = 'ETH'
-product_id = f"{symbol}-USD"
-
-
-
-
 update_time = 5
 running = True
 sell_counter = 0
@@ -60,6 +52,29 @@ window_size_for_rsi = 14
 
 buy_counter_db = 0
 
+
+def checkValidApiKey(api_key):
+
+    url = 'https://api.coinbase.com/v2/user'
+
+    headers = {
+    'Content-Type': 'application/json',
+    'Authorization': f'Bearer {api_key}',
+    }
+
+    try:
+        response = requests.get(url, headers=headers)
+        response.raise_for_status() 
+
+        if 'data' in response.json() and 'id' in response.json()['data']:
+            print('API key is valid!')
+        else:
+            print('API key is not valid.')
+
+    except requests.exceptions.HTTPError as err:
+        print(f'HTTP error occurred: {err}')
+    except Exception as e:
+        print(f'An error occurred: {e}')
 
 
 def getCoinMarketCap():
@@ -268,16 +283,16 @@ def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell
         print(f"Error updating buy sell counter: {e}")
         return None
     
-def update_bot_output(customerId, moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi):
-    customerId = str(customerId)
+def update_bot_output(customerId, moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi, symbol):
     data_to_insert = {
-        'display_id': customerId,
+        'display_id': str(customerId),
         'moving_average_price': Decimal(str(moving_average)),
         'closing_price_result': Decimal(str(closing_price_result)),
         'update_price_result': str(update_price_result),
         'trade_buy_amount': Decimal(str(trade_buy_amount)),
         'trade_sell_amount': Decimal(str(trade_sell_amount)),
         'rsi_value': Decimal(str(rsi)),
+        'symbol': str(symbol)
     }
     try:
         response = bot_output_table.put_item(Item=data_to_insert)
@@ -365,7 +380,22 @@ def lambda_handler(event, context):
     
 
 
-    
+    # Scan the table to retrieve all customer IDs
+    response = order_configuration_table.scan(ProjectionExpression='customerId')
+
+    # Extract and print the customer IDs
+    customer_ids = [item['customerId'] for item in response.get('Items', [])]
+
+    if customer_ids:
+        print("Customer IDs:")
+        for customer_id in customer_ids:
+            print(customer_id)
+    else:
+        print("No customer IDs found in the table.")
+
+
+
+            
     api_key = getCustomerApiKey(customerId="1")
     if 'body' in api_key:
         api_key_body = api_key['body']
@@ -508,10 +538,12 @@ def lambda_handler(event, context):
         round_trade_buy_amount = round(trade_buy_amount, 2)
         round_trade_sell_amount = round(trade_sell_amount, 2)
         round_rsi = round(rsi, 2)
+        symbol = "ETH"
         
         # Bot output update in database.
         update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
-                        update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, trade_sell_amount=round_trade_sell_amount, rsi=round_rsi)
+                        update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
+                        trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
         
         
         set_api_credentials(api_key_body_strip, api_secret_body_strip)
@@ -601,7 +633,8 @@ def lambda_handler(event, context):
         else:
             trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
             print(f"Sell Amount Price: {trade_sell_amount} \n")
-            
+
+
         closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
 
         if not isinstance(closing_prices, str):
@@ -616,10 +649,12 @@ def lambda_handler(event, context):
         round_trade_buy_amount = round(trade_buy_amount, 2)
         round_trade_sell_amount = round(trade_sell_amount, 2)
         round_rsi = round(rsi, 2)
-        
+        symbol = "BTC"
+
         # Bot output update in database.
         update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
-                        update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, trade_sell_amount=round_trade_sell_amount, rsi=round_rsi)
+                        update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
+                        trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
         
         
         set_api_credentials(api_key_body_strip, api_secret_body_strip)
@@ -882,7 +917,6 @@ def getCustomerApiKey(customerId):
         return error_handle
 
 
-
 def getCustomerApiSecret(customerId):
     try:
         # customerId = int(customerId)
@@ -905,8 +939,6 @@ def getCustomerApiSecret(customerId):
         error_handle = logger.exception(f"{e}")
         return error_handle
 
-
-
     
 def getBotResult(display_id):
     try:
@@ -923,4 +955,6 @@ def getBotResult(display_id):
     except Exception as e:
         error_handle = logger.exception(f"{e}")
         return error_handle
+    
+
   
