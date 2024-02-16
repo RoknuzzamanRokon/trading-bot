@@ -370,6 +370,14 @@ def get_current_price(customerId):
     except Exception as e:
         print(f"Error retrieving current price: {e}")
         return 0
+    
+
+
+
+
+
+
+
 
 def lambda_handler(event, context):
     global buy_counter, sell_counter, running, max_buy, max_sell, update_time, buy_counter_db, window_size_for_rsi, btc_size, sell_btc_size, window_size
@@ -390,321 +398,316 @@ def lambda_handler(event, context):
         print("Customer IDs:")
         for customer_id in customer_ids:
             print(customer_id)
+            
+            api_key = getCustomerApiKey(customerId=customer_id)
+            if 'body' in api_key:
+                api_key_body = api_key['body']
+                api_key_body_strip = api_key_body.strip('\"')
+
+
+            api_secret = getCustomerApiSecret(customerId=customer_id)
+            if 'body' in api_secret:
+                api_secret_body = api_secret['body']
+                api_secret_body_strip = api_secret_body.strip('\"')
+
+            symbol_01 = getOrderConfig(customerId=customer_id, attributeToSearch='symbol')
+            if 'body' in symbol_01:
+                symbol_str = symbol_01['body']
+                symbol_str_strip = symbol_str.strip('\"')
+
+            product_id_01 = getOrderConfig(customerId=customer_id, attributeToSearch='product_id')
+            if 'body' in product_id_01:
+                symbol_str = product_id_01['body']
+                product_id_str_strip = symbol_str.strip('\"')
+
+            profit_count = getOrderConfig(customerId=customer_id, attributeToSearch='PROFIT_PERCENTAGE')
+            if 'body' in profit_count:
+                symbol_str = profit_count['body']
+                profit_count_strip = symbol_str.strip('\"')
+
+            loss_count = getOrderConfig(customerId=customer_id, attributeToSearch='LOSS_PERCENTAGE')
+            if 'body' in loss_count:
+                symbol_str = loss_count['body']
+                loss_count_strip = symbol_str.strip('\"')
+                loss_count_strip_int = float(loss_count_strip)
+                print(type(loss_count_strip_int))
+                print(f"Loss profit check into db:---------------{loss_count_strip_int}")
+
+            max_buy_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_buy')
+            if 'body' in max_buy_count:
+                symbol_str = max_buy_count['body']
+                max_buy_count_strip = symbol_str.strip('\"')
+                float_max_buy_count_strip = float(max_buy_count_strip)
+
+
+            max_sell_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_sell')
+            if 'body' in max_sell_count:
+                symbol_str = max_sell_count['body']
+                max_sell_count_strip = symbol_str.strip('\"')
+                float_max_sell_count_strip = float(max_sell_count_strip)
+
+
+
+            max_buy = float_max_buy_count_strip
+            max_sell = float_max_sell_count_strip
+
+
+            USD_Size = getOrderConfig(customerId=customer_id, attributeToSearch='usd_size')
+            if 'body' in USD_Size:
+                symbol_str = USD_Size['body']
+                USD_Size_strip = symbol_str.strip('\"')
+            
+
+            USD_Size = float(USD_Size_strip)
+            print(USD_Size)
+            btc_size = float(USD_Size)
+            sell_btc_size = btc_size + 0.06
+
+
+
+
+            buy_check = get_buy_counter(customerId=customer_id)
+            sell_check = get_sell_counter(customerId=customer_id)
+            
+            
+            # Add logic for entering trad.
+            if symbol_str_strip == 'ETH' and product_id_str_strip == 'ETH-USD': 
+                symbol = symbol_str_strip
+                
+                print("----------------------------------------------------------------------------")
+                buy_check = get_buy_counter(customerId=customer_id)
+                print("Get data form db buy:", buy_check)
+                sell_check = get_sell_counter(customerId=customer_id)
+                print("Get data form db sell:", sell_check)
+                
+                total_buy = get_total_buy(customerId=customer_id)
+                print(f"Total buy: {total_buy}")
+                total_sell = get_total_sell(customerId=customer_id)
+                print(f"Total sell: {total_sell}")
+                
+                if buy_check is None: 
+                    customerId=customer_id
+                    set_buy=0
+                    set_sell=0
+                    total_buy=0
+                    total_sell=0
+                    current_price=0
+                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
+            
+                get_current_price_db = get_current_price(customerId=customer_id)
+                
+                historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
+                print(type(historical_prices))
+                moving_average = calculate_moving_average(historical_prices, window_size)
+                print(f'Moving Average: {moving_average}')
+
+                closing_price_result = get_last_day_closing_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                print(f"Closing price: {closing_price_result} \n")
+                
+                update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                print(f"Current Price: {update_price_result} \n")
+
+                profit_count_strip_int = float(profit_count_strip)
+                   
+
+                trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
+                print(f"Buy Amount Price: {trade_buy_amount}")
+                
+            
+                
+                if buy_check == 0:
+                    trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
+                    print(f"Sell Amount Price: {trade_sell_amount} \n")
+                    
+                else:
+                    trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
+                    print(f"Sell Amount Price: {trade_sell_amount} \n")
+                    
+                closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
+
+                if not isinstance(closing_prices, str):
+                    
+                    rsi = calculate_rsi(closing_prices, window_size_for_rsi)
+                    print(f'The RSI for the result candle prices per minute is: {rsi}')
+                
+                customerId = "1"
+                # Rounded all value in 2 decimal places.
+                round_moving_average = round(moving_average, 2)
+                round_closing_price_result = round(closing_price_result, 2)
+                round_trade_buy_amount = round(trade_buy_amount, 2)
+                round_trade_sell_amount = round(trade_sell_amount, 2)
+                round_rsi = round(rsi, 2)
+                symbol = "ETH"
+                
+                # Bot output update in database.
+                update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+                                update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
+                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
+                
+                
+                set_api_credentials(api_key_body_strip, api_secret_body_strip)
+
+                if update_price_result is not None:
+                    update_price_float = float(update_price_result)
+                    if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
+                        
+                        # fiat_limit_buy(product_id, btc_size)
+
+                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
+                        buy_counter += 1
+
+                        total_buy += 1
+                        total_sell += 0
+                        
+                        current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                        print(type(current_price))
+
+                        set_buy = 1
+                        set_sell = 0
+
+                        customerId = "1"
+
+                        update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
+                    
+
+                    elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
+                        
+                        # fiat_limit_sell(product_id, sell_btc_size)
+                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+                        sell_counter += 1
+
+                        total_buy += 0
+                        total_sell += 1
+
+                        reset_buy = 0
+                        reset_sell = 0
+                        reset_current_price = 0
+
+                        customerId = "1"         
+
+                        update_buy_sell_counter(customerId, reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
+
+                    elif sell_counter == max_sell and buy_counter == max_buy:
+                        running = False
+                else:
+                    print('Skipping due to an error in obtaining the current price.')
+            
+            # Add logic for entering trad.
+            elif symbol_str_strip == 'BTC' and product_id_str_strip == 'BTC-USD': 
+                symbol = symbol_str_strip
+                
+                print("----------------------------------------------------------------------------")
+                buy_check = get_buy_counter(customerId=customer_id)
+                print("Get data form db buy:", buy_check)
+                sell_check = get_sell_counter(customerId=customer_id)
+                print("Get data form db sell:", sell_check)
+                
+                total_buy = get_total_buy(customerId=customer_id)
+                print(f"Total buy: {total_buy}")
+                total_sell = get_total_sell(customerId=customer_id)
+                print(f"Total sell: {total_sell}")
+                
+                get_current_price_db = get_current_price(customerId=customer_id)
+                
+                historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
+                print(type(historical_prices))
+                moving_average = calculate_moving_average(historical_prices, window_size)
+                print(f'Moving Average: {moving_average}')
+
+                closing_price_result = get_last_day_closing_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                print(f"Closing price: {closing_price_result} \n")
+                
+                update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                print(f"Current Price: {update_price_result} \n")
+                    
+                trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
+                print(f"Buy Amount Price: {trade_buy_amount}")
+                
+            
+                
+                if buy_check == 0:
+                    trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
+                    print(f"Sell Amount Price: {trade_sell_amount} \n")
+                    
+                else:
+                    trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
+                    print(f"Sell Amount Price: {trade_sell_amount} \n")
+
+
+                closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
+
+                if not isinstance(closing_prices, str):
+                    
+                    rsi = calculate_rsi(closing_prices, window_size_for_rsi)
+                    print(f'The RSI for the result candle prices per minute is: {rsi}')
+                
+                customerId = customer_id
+                # Rounded all value in 2 decimal places.
+                round_moving_average = round(moving_average, 2)
+                round_closing_price_result = round(closing_price_result, 2)
+                round_trade_buy_amount = round(trade_buy_amount, 2)
+                round_trade_sell_amount = round(trade_sell_amount, 2)
+                round_rsi = round(rsi, 2)
+                symbol = "BTC"
+
+                # Bot output update in database.
+                update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+                                update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
+                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
+                
+                
+                set_api_credentials(api_key_body_strip, api_secret_body_strip)
+
+                if update_price_result is not None:
+                    update_price_float = float(update_price_result)
+                    if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
+                        
+                        # fiat_limit_buy(product_id, btc_size)
+
+                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
+                        buy_counter += 1
+
+                        total_buy += 1
+                        total_sell += 0
+                        
+                        current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                        print(type(current_price))
+
+                        set_buy = 1
+                        set_sell = 0
+
+                        customerId = customer_id
+
+                        update_buy_sell_counter(customerId, set_buy, set_sell, total_buy, total_sell, current_price)
+                    
+
+                    elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
+                        
+                        # fiat_limit_sell(product_id, sell_btc_size)
+                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+                        sell_counter += 1
+
+                        total_buy += 0
+                        total_sell += 1
+
+                        reset_buy = 0
+                        reset_sell = 0
+                        reset_current_price = 0
+
+                        customerId = customer_id
+                        
+                        update_buy_sell_counter(customerId, reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
+
+                    elif sell_counter == max_sell and buy_counter == max_buy:
+                        running = False
+                else:
+                    print('Skipping due to an error in obtaining the current price.')
+            else:
+                print('Not found')
+
     else:
         print("No customer IDs found in the table.")
 
-
-
-            
-    api_key = getCustomerApiKey(customerId="1")
-    if 'body' in api_key:
-        api_key_body = api_key['body']
-        api_key_body_strip = api_key_body.strip('\"')
-
-
-    api_secret = getCustomerApiSecret(customerId="1")
-    if 'body' in api_secret:
-        api_secret_body = api_secret['body']
-        api_secret_body_strip = api_secret_body.strip('\"')
-
-    symbol_01 = getOrderConfig(customerId='1', attributeToSearch='symbol')
-    if 'body' in symbol_01:
-        symbol_str = symbol_01['body']
-        symbol_str_strip = symbol_str.strip('\"')
-
-    product_id_01 = getOrderConfig(customerId='1', attributeToSearch='product_id')
-    if 'body' in product_id_01:
-        symbol_str = product_id_01['body']
-        product_id_str_strip = symbol_str.strip('\"')
-
-    profit_count = getOrderConfig(customerId='1', attributeToSearch='PROFIT_PERCENTAGE')
-    if 'body' in profit_count:
-        symbol_str = profit_count['body']
-        profit_count_strip = symbol_str.strip('\"')
-
-    loss_count = getOrderConfig(customerId='1', attributeToSearch='LOSS_PERCENTAGE')
-    if 'body' in loss_count:
-        symbol_str = loss_count['body']
-        loss_count_strip = symbol_str.strip('\"')
-
-    max_buy_count = getOrderConfig(customerId='1', attributeToSearch='max_buy')
-    if 'body' in max_buy_count:
-        symbol_str = max_buy_count['body']
-        max_buy_count_strip = symbol_str.strip('\"')
-        float_max_buy_count_strip = float(max_buy_count_strip)
-
-
-    max_sell_count = getOrderConfig(customerId='1', attributeToSearch='max_sell')
-    if 'body' in max_sell_count:
-        symbol_str = max_sell_count['body']
-        max_sell_count_strip = symbol_str.strip('\"')
-        float_max_sell_count_strip = float(max_sell_count_strip)
-
-
-
-    max_buy = float_max_buy_count_strip
-    max_sell = float_max_sell_count_strip
-
-
-    USD_Size = getOrderConfig(customerId='1', attributeToSearch='usd_size')
-    if 'body' in USD_Size:
-        symbol_str = USD_Size['body']
-        USD_Size_strip = symbol_str.strip('\"')
-    
-
-    USD_Size = float(USD_Size_strip)
-    print(USD_Size)
-    btc_size = float(USD_Size)
-    sell_btc_size = btc_size + 0.06
-
-
-
-
-
-
-
-
-
-
-
-    buy_check = get_buy_counter(customerId="1")
-    sell_check = get_sell_counter(customerId="1")
-    
-    
-    # Add logic for entering trad.
-    if symbol_str_strip == 'ETH' and product_id_str_strip == 'ETH-USD': 
-        symbol = symbol_str_strip
-        
-        print("----------------------------------------------------------------------------")
-        buy_check = get_buy_counter(customerId="1")
-        print("Get data form db buy:", buy_check)
-        sell_check = get_sell_counter(customerId="1")
-        print("Get data form db sell:", sell_check)
-        
-        total_buy = get_total_buy(customerId="1")
-        print(f"Total buy: {total_buy}")
-        total_sell = get_total_sell(customerId="1")
-        print(f"Total sell: {total_sell}")
-        
-        if buy_check is None: 
-            customerId="1"
-            set_buy=0
-            set_sell=0
-            total_buy=0
-            total_sell=0
-            current_price=0
-            update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
-     
-        get_current_price_db = get_current_price(customerId="1")
-        
-        historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
-        print(type(historical_prices))
-        moving_average = calculate_moving_average(historical_prices, window_size)
-        print(f'Moving Average: {moving_average}')
-
-        closing_price_result = get_last_day_closing_price(coin_symbol=symbol, api_key=api_key_body_strip)
-        print(f"Closing price: {closing_price_result} \n")
-        
-        update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-        print(f"Current Price: {update_price_result} \n")
-
-        profit_count_strip_int = float(profit_count_strip)
-        loss_count_strip_int = float(loss_count_strip)   
-
-        trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
-        print(f"Buy Amount Price: {trade_buy_amount}")
-        
-       
-        
-        if buy_check == 0:
-            trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
-            print(f"Sell Amount Price: {trade_sell_amount} \n")
-            
-        else:
-            trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
-            print(f"Sell Amount Price: {trade_sell_amount} \n")
-            
-        closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
-
-        if not isinstance(closing_prices, str):
-            
-            rsi = calculate_rsi(closing_prices, window_size_for_rsi)
-            print(f'The RSI for the result candle prices per minute is: {rsi}')
-        
-        customerId = "1"
-        # Rounded all value in 2 decimal places.
-        round_moving_average = round(moving_average, 2)
-        round_closing_price_result = round(closing_price_result, 2)
-        round_trade_buy_amount = round(trade_buy_amount, 2)
-        round_trade_sell_amount = round(trade_sell_amount, 2)
-        round_rsi = round(rsi, 2)
-        symbol = "ETH"
-        
-        # Bot output update in database.
-        update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
-                        update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
-                        trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
-        
-        
-        set_api_credentials(api_key_body_strip, api_secret_body_strip)
-
-        if update_price_result is not None:
-            update_price_float = float(update_price_result)
-            if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
-                
-                # fiat_limit_buy(product_id, btc_size)
-
-                print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
-                buy_counter += 1
-
-                total_buy += 1
-                total_sell += 0
-                
-                current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(type(current_price))
-
-                set_buy = 1
-                set_sell = 0
-
-                customerId = "1"
-
-                update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
-            
-
-            elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
-                
-                # fiat_limit_sell(product_id, sell_btc_size)
-                print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                sell_counter += 1
-
-                total_buy += 0
-                total_sell += 1
-
-                reset_buy = 0
-                reset_sell = 0
-                reset_current_price = 0
-
-                customerId = "1"         
-
-                update_buy_sell_counter(customerId, reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
-
-            elif sell_counter == max_sell and buy_counter == max_buy:
-                running = False
-        else:
-            print('Skipping due to an error in obtaining the current price.')
-    
-    # Add logic for entering trad.
-    elif symbol_str_strip == 'BTC' and product_id_str_strip == 'BTC-USD': 
-        symbol = symbol_str_strip
-        
-        print("----------------------------------------------------------------------------")
-        buy_check = get_buy_counter(customerId=1)
-        print("Get data form db buy:", buy_check)
-        sell_check = get_sell_counter(customerId=1)
-        print("Get data form db sell:", sell_check)
-        
-        total_buy = get_total_buy(customerId=1)
-        print(f"Total buy: {total_buy}")
-        total_sell = get_total_sell(customerId=1)
-        print(f"Total sell: {total_sell}")
-        
-        get_current_price_db = get_current_price(customerId="1")
-        
-        historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
-        print(type(historical_prices))
-        moving_average = calculate_moving_average(historical_prices, window_size)
-        print(f'Moving Average: {moving_average}')
-
-        closing_price_result = get_last_day_closing_price(coin_symbol=symbol, api_key=api_key_body_strip)
-        print(f"Closing price: {closing_price_result} \n")
-        
-        update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-        print(f"Current Price: {update_price_result} \n")
-            
-        trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
-        print(f"Buy Amount Price: {trade_buy_amount}")
-        
-       
-        
-        if buy_check == 0:
-            trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
-            print(f"Sell Amount Price: {trade_sell_amount} \n")
-            
-        else:
-            trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
-            print(f"Sell Amount Price: {trade_sell_amount} \n")
-
-
-        closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
-
-        if not isinstance(closing_prices, str):
-            
-            rsi = calculate_rsi(closing_prices, window_size_for_rsi)
-            print(f'The RSI for the result candle prices per minute is: {rsi}')
-        
-        customerId = "1"
-        # Rounded all value in 2 decimal places.
-        round_moving_average = round(moving_average, 2)
-        round_closing_price_result = round(closing_price_result, 2)
-        round_trade_buy_amount = round(trade_buy_amount, 2)
-        round_trade_sell_amount = round(trade_sell_amount, 2)
-        round_rsi = round(rsi, 2)
-        symbol = "BTC"
-
-        # Bot output update in database.
-        update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
-                        update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
-                        trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
-        
-        
-        set_api_credentials(api_key_body_strip, api_secret_body_strip)
-
-        if update_price_result is not None:
-            update_price_float = float(update_price_result)
-            if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
-                
-                # fiat_limit_buy(product_id, btc_size)
-
-                print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
-                buy_counter += 1
-
-                total_buy += 1
-                total_sell += 0
-                
-                current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(type(current_price))
-
-                set_buy = 1
-                set_sell = 0
-
-                customerId = "1"
-
-                update_buy_sell_counter(customerId, set_buy, set_sell, total_buy, total_sell, current_price)
-            
-
-            elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
-                
-                # fiat_limit_sell(product_id, sell_btc_size)
-                print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                sell_counter += 1
-
-                total_buy += 0
-                total_sell += 1
-
-                reset_buy = 0
-                reset_sell = 0
-                reset_current_price = 0
-
-                customerId = "1"
-                
-                update_buy_sell_counter(customerId, reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
-
-            elif sell_counter == max_sell and buy_counter == max_buy:
-                running = False
-        else:
-            print('Skipping due to an error in obtaining the current price.')
-    else:
-        print('Not found')
 
 
     # This is API section. 
