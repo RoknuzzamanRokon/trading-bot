@@ -282,6 +282,28 @@ def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell
     except Exception as e:
         print(f"Error updating buy sell counter: {e}")
         return None
+
+
+def update_configuration_table(customerId,symbol,usd_size,product_id,max_buy,max_sell,PROFIT_PERCENTAGE, LOSS_PERCENTAGE):
+    data_to_insert = {
+            'customerId': str(customerId), 
+            'symbol': str(symbol),
+            'usd_size': Decimal(usd_size),
+            'product_id': str(product_id),
+            'max_buy': Decimal(max_buy),
+            'max_sell': Decimal(max_sell),
+            'PROFIT_PERCENTAGE': str(PROFIT_PERCENTAGE),
+            'LOSS_PERCENTAGE': str(LOSS_PERCENTAGE)
+        }
+        
+    try:
+        # Insert or update data into DynamoDB
+        response = order_configuration_table.put_item(Item=data_to_insert)
+        return response
+    except Exception as e:
+        print(f"Error updating buy sell counter: {e}")
+        return None
+    
     
 def update_bot_output(customerId, moving_average, closing_price_result, update_price_result, trade_buy_amount, trade_sell_amount, rsi, symbol):
     data_to_insert = {
@@ -394,10 +416,30 @@ def lambda_handler(event, context):
     # Extract and print the customer IDs
     customer_ids = [item['customerId'] for item in response.get('Items', [])]
 
+
+    # Scan the table to retrieve all customer IDs
+    response_for_configuration_table = order_configuration_table.scan(ProjectionExpression='customerId')
+
+    # Extract and print the customer IDs
+    configuration_customer_ids = [item['customerId'] for item in response_for_configuration_table.get('Items', [])]
+
     if customer_ids:
         print("Customer IDs:")
         for customer_id in customer_ids:
             print(customer_id)
+
+            if customer_id not in configuration_customer_ids: 
+                    customerId=customer_id
+                    symbol="BTC"
+                    usd_size=0
+                    product_id="BTC-USD"
+                    max_buy=0
+                    max_sell=0
+                    PROFIT_PERCENTAGE="1.0"
+                    LOSS_PERCENTAGE="1.0"
+                    update_configuration_table(customerId,symbol, usd_size, product_id, max_buy, max_sell, PROFIT_PERCENTAGE, LOSS_PERCENTAGE)
+
+            
             
             api_key = getCustomerApiKey(customerId=customer_id)
             if 'body' in api_key:
@@ -424,6 +466,8 @@ def lambda_handler(event, context):
             if 'body' in profit_count:
                 symbol_str = profit_count['body']
                 profit_count_strip = symbol_str.strip('\"')
+                print(profit_count_strip)
+                print(type(profit_count_strip))
                 profit_count_strip_int = float(profit_count_strip)
 
             loss_count = getOrderConfig(customerId=customer_id, attributeToSearch='LOSS_PERCENTAGE')
@@ -433,6 +477,7 @@ def lambda_handler(event, context):
                 loss_count_strip_int = float(loss_count_strip)
                 print(type(loss_count_strip_int))
                 print(f"Loss profit check into db:---------------{loss_count_strip_int}")
+
 
             max_buy_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_buy')
             if 'body' in max_buy_count:
@@ -476,6 +521,7 @@ def lambda_handler(event, context):
                 symbol = symbol_str_strip
                 
                 print("----------------------------------------------------------------------------")
+                print("Hey, I'm 'ETH' here.")
                 buy_check = get_buy_counter(customerId=customer_id)
                 print("Get data form db buy:", buy_check)
                 sell_check = get_sell_counter(customerId=customer_id)
@@ -598,6 +644,7 @@ def lambda_handler(event, context):
                 symbol = symbol_str_strip
                 
                 print("----------------------------------------------------------------------------")
+                print("Hey, I'm 'BTC' here.")
                 buy_check = get_buy_counter(customerId=customer_id)
                 print("Get data form db buy:", buy_check)
                 sell_check = get_sell_counter(customerId=customer_id)
@@ -616,7 +663,7 @@ def lambda_handler(event, context):
                     total_sell=0
                     current_price=0
                     update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
-                    
+
                 
                 get_current_price_db = get_current_price(customerId=customer_id)
                 
@@ -868,6 +915,7 @@ def saveOrderConfig(requestBody):
             'Error': str(e)
         }
         return buildResponse(500, body=body)
+
 
 
 def getOrderConfigAll(customerId):
