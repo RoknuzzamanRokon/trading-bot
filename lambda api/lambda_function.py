@@ -570,7 +570,7 @@ def lambda_handler(event, context):
                     rsi = calculate_rsi(closing_prices, window_size_for_rsi)
                     print(f'The RSI for the result candle prices per minute is: {rsi}')
                 
-                customerId = "1"
+                customerId = customer_id
                 # Rounded all value in 2 decimal places.
                 round_moving_average = round(moving_average, 2)
                 round_closing_price_result = round(closing_price_result, 2)
