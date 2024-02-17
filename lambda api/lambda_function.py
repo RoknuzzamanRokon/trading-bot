@@ -396,11 +396,6 @@ def get_current_price(customerId):
 
 
 
-
-
-
-
-
 def lambda_handler(event, context):
     global buy_counter, sell_counter, running, max_buy, max_sell, update_time, buy_counter_db, window_size_for_rsi, btc_size, sell_btc_size, window_size
 
@@ -417,10 +412,8 @@ def lambda_handler(event, context):
     customer_ids = [item['customerId'] for item in response.get('Items', [])]
 
 
-    # Scan the table to retrieve all customer IDs
+    # Scan the configuration table to retrieve all customer IDs
     response_for_configuration_table = order_configuration_table.scan(ProjectionExpression='customerId')
-
-    # Extract and print the customer IDs
     configuration_customer_ids = [item['customerId'] for item in response_for_configuration_table.get('Items', [])]
 
     if customer_ids:
