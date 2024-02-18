@@ -1,7 +1,7 @@
 import requests
 
 
-url = 'https://zyv0q9hl1g.execute-api.us-east-2.amazonaws.com/first_stage/health'
+url = 'https://zyv0q9hl1g.execute-api.us-east-2.amazonaws.com/config-stage/health'
 
 
 while True:
