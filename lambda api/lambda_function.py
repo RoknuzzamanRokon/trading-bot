@@ -548,8 +548,8 @@ def lambda_handler(event, context):
                 get_current_price_db = get_current_price(customerId=customer_id)
                 
                 historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
-                print(f"last month price: {historical_prices}")
-                print(type(historical_prices))
+                # print(f"last month price: {historical_prices}")
+                # print(type(historical_prices))
                 moving_average = calculate_moving_average(historical_prices, window_size)
                 print(f'Moving Average: {moving_average}')
 
@@ -600,7 +600,7 @@ def lambda_handler(event, context):
                     update_price_float = float(update_price_result)
                     if total_buy < max_buy and rsi <= 30 and buy_check == 0:
                         
-                        # fiat_limit_buy(product_id, btc_size)
+                        fiat_limit_buy(product_id, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                         total_buy += 1
@@ -619,7 +619,7 @@ def lambda_handler(event, context):
 
                     elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
                         
-                        # fiat_limit_sell(product_id, sell_btc_size)
+                        fiat_limit_sell(product_id, sell_btc_size)
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
                         sell_counter += 1
 
@@ -718,7 +718,7 @@ def lambda_handler(event, context):
                     update_price_float = float(update_price_result)
                     if total_buy < max_buy and rsi <= 30 and buy_check == 0:
                         
-                        # fiat_limit_buy(product_id, btc_size)
+                        fiat_limit_buy(product_id, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                         total_buy += 1
@@ -737,7 +737,7 @@ def lambda_handler(event, context):
 
                     elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
                         
-                        # fiat_limit_sell(product_id, sell_btc_size)
+                        fiat_limit_sell(product_id, sell_btc_size)
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
                        
 
