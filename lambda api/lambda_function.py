@@ -43,11 +43,8 @@ bot_output_table = dynamodb.Table(table_4)
 
 
 
-update_time = 5
-running = True
-sell_counter = 0
-buy_counter = 0
-window_size = 8
+update_time = 1
+window_size = 30
 window_size_for_rsi = 14 
 
 buy_counter_db = 0
@@ -397,17 +394,15 @@ def get_current_price(customerId):
 
 
 def lambda_handler(event, context):
-    global buy_counter, sell_counter, running, max_buy, max_sell, update_time, buy_counter_db, window_size_for_rsi, btc_size, sell_btc_size, window_size
+    global update_time, buy_counter_db, window_size_for_rsi, window_size
 
     logger.info(event)
     httpMethod = event['httpMethod']
     path = event['path']
-    
 
 
     # Scan the table to retrieve all customer IDs
     response = customer_table.scan(ProjectionExpression='customerId')
-
     # Extract and print the customer IDs
     customer_ids = [item['customerId'] for item in response.get('Items', [])]
 
@@ -419,7 +414,7 @@ def lambda_handler(event, context):
     if customer_ids:
         print("Customer IDs:")
         for customer_id in customer_ids:
-            print(customer_id)
+            print(f"***********************------------------CustomerId:{customer_id}")
 
             if customer_id not in configuration_customer_ids: 
                     customerId=customer_id
@@ -434,16 +429,30 @@ def lambda_handler(event, context):
 
             
             
-            api_key = getCustomerApiKey(customerId=customer_id)
+            api_key = getCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
             if 'body' in api_key:
                 api_key_body = api_key['body']
                 api_key_body_strip = api_key_body.strip('\"')
 
-
-            api_secret = getCustomerApiSecret(customerId=customer_id)
+            api_secret = getCustomerItem(customerId=customer_id, attributeToSearch='apiSecret')
             if 'body' in api_secret:
                 api_secret_body = api_secret['body']
                 api_secret_body_strip = api_secret_body.strip('\"')
+                
+            running_status = getCustomerItem(customerId=customer_id, attributeToSearch='running_status')
+            if 'body' in running_status:
+                running_status_body = running_status['body']
+                running_status_body_strip = running_status_body.strip('\"')
+
+                print(f"Running Status: {running_status_body_strip}")
+                # print(running_status_body_strip)
+                # print(type(running_status_body_strip))
+
+
+                # if running_status_body_strip == "ON":
+                #     print("present")
+                # else:
+                #     print("Not present")
 
             symbol_01 = getOrderConfig(customerId=customer_id, attributeToSearch='symbol')
             if 'body' in symbol_01:
@@ -471,20 +480,17 @@ def lambda_handler(event, context):
                 print(type(loss_count_strip_int))
                 print(f"Loss profit check into db:---------------{loss_count_strip_int}")
 
-
             max_buy_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_buy')
             if 'body' in max_buy_count:
                 symbol_str = max_buy_count['body']
                 max_buy_count_strip = symbol_str.strip('\"')
                 float_max_buy_count_strip = float(max_buy_count_strip)
 
-
             max_sell_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_sell')
             if 'body' in max_sell_count:
                 symbol_str = max_sell_count['body']
                 max_sell_count_strip = symbol_str.strip('\"')
                 float_max_sell_count_strip = float(max_sell_count_strip)
-
 
 
             max_buy = float_max_buy_count_strip
@@ -498,19 +504,24 @@ def lambda_handler(event, context):
             
 
             USD_Size = float(USD_Size_strip)
-            print(USD_Size)
+            print(f"USD SIZE: {USD_Size}")
             btc_size = float(USD_Size)
             sell_btc_size = btc_size + 0.06
 
-
-
-
             buy_check = get_buy_counter(customerId=customer_id)
+            print(f"THis is sell check: {buy_check}")
             sell_check = get_sell_counter(customerId=customer_id)
+            print(f"THis is sell check: {sell_check}")
             
             
+
+
+
+
+
+
             # Add logic for entering trad.
-            if symbol_str_strip == 'ETH' and product_id_str_strip == 'ETH-USD': 
+            if symbol_str_strip == 'ETH' and product_id_str_strip == 'ETH-USD' and running_status_body_strip == "ON": 
                 symbol = symbol_str_strip
                 
                 print("----------------------------------------------------------------------------")
@@ -537,6 +548,7 @@ def lambda_handler(event, context):
                 get_current_price_db = get_current_price(customerId=customer_id)
                 
                 historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
+                print(f"last month price: {historical_prices}")
                 print(type(historical_prices))
                 moving_average = calculate_moving_average(historical_prices, window_size)
                 print(f'Moving Average: {moving_average}')
@@ -546,9 +558,6 @@ def lambda_handler(event, context):
                 
                 update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
                 print(f"Current Price: {update_price_result} \n")
-
-                
-                   
 
                 trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
                 print(f"Buy Amount Price: {trade_buy_amount}")
@@ -580,7 +589,7 @@ def lambda_handler(event, context):
                 symbol = "ETH"
                 
                 # Bot output update in database.
-                update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+                update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
                                 update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
                                 trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
                 
@@ -589,13 +598,11 @@ def lambda_handler(event, context):
 
                 if update_price_result is not None:
                     update_price_float = float(update_price_result)
-                    if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
+                    if total_buy < max_buy and rsi <= 30 and buy_check == 0:
                         
                         # fiat_limit_buy(product_id, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
-                        buy_counter += 1
-
                         total_buy += 1
                         total_sell += 0
                         
@@ -605,12 +612,12 @@ def lambda_handler(event, context):
                         set_buy = 1
                         set_sell = 0
 
-                        customerId = "1"
+                        customerId = customer_id
 
-                        update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
+                        update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price)
                     
 
-                    elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
+                    elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
                         
                         # fiat_limit_sell(product_id, sell_btc_size)
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -623,17 +630,15 @@ def lambda_handler(event, context):
                         reset_sell = 0
                         reset_current_price = 0
 
-                        customerId = "1"         
+                        customerId = customer_id         
 
-                        update_buy_sell_counter(customerId, reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
+                        update_buy_sell_counter(customerId=customerId, buy_count=reset_buy, sell_count=reset_sell, total_buy=total_buy, total_sell=total_sell, current_price=reset_current_price)
 
-                    elif sell_counter == max_sell and buy_counter == max_buy:
-                        running = False
                 else:
                     print('Skipping due to an error in obtaining the current price.')
             
             # Add logic for entering trad.
-            elif symbol_str_strip == 'BTC' and product_id_str_strip == 'BTC-USD': 
+            elif symbol_str_strip == 'BTC' and product_id_str_strip == 'BTC-USD' and running_status_body_strip == "ON": 
                 symbol = symbol_str_strip
                 
                 print("----------------------------------------------------------------------------")
@@ -655,8 +660,8 @@ def lambda_handler(event, context):
                     total_buy=0
                     total_sell=0
                     current_price=0
-                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
-
+                    update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price)
+                    
                 
                 get_current_price_db = get_current_price(customerId=customer_id)
                 
@@ -702,7 +707,7 @@ def lambda_handler(event, context):
                 symbol = "BTC"
 
                 # Bot output update in database.
-                update_bot_output(customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+                update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
                                 update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
                                 trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
                 
@@ -711,13 +716,11 @@ def lambda_handler(event, context):
 
                 if update_price_result is not None:
                     update_price_float = float(update_price_result)
-                    if buy_counter < max_buy and total_buy < max_buy and rsi <= 30 and buy_check == 0:
+                    if total_buy < max_buy and rsi <= 30 and buy_check == 0:
                         
                         # fiat_limit_buy(product_id, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
-                        buy_counter += 1
-
                         total_buy += 1
                         total_sell += 0
                         
@@ -729,14 +732,14 @@ def lambda_handler(event, context):
 
                         customerId = customer_id
 
-                        update_buy_sell_counter(customerId, set_buy, set_sell, total_buy, total_sell, current_price)
+                        update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price)
                     
 
-                    elif sell_counter < max_sell and  total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
+                    elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
                         
                         # fiat_limit_sell(product_id, sell_btc_size)
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                        sell_counter += 1
+                       
 
                         total_buy += 0
                         total_sell += 1
@@ -747,10 +750,8 @@ def lambda_handler(event, context):
 
                         customerId = customer_id
                         
-                        update_buy_sell_counter(customerId, reset_buy, reset_sell, total_buy, total_sell, reset_current_price)
-
-                    elif sell_counter == max_sell and buy_counter == max_buy:
-                        running = False
+                        update_buy_sell_counter(customerId=customerId, buy_count=reset_buy, sell_count=reset_sell, total_buy=total_buy, total_sell=total_sell, current_price=reset_current_price)
+                    
                 else:
                     print('Skipping due to an error in obtaining the current price.')
             else:
@@ -768,13 +769,18 @@ def lambda_handler(event, context):
         response = saveCustomer(json.loads(event['body']))
     elif httpMethod == getMethod and path == customerPath:
         response = getCustomer(event['queryStringParameters']['customerId'])
+    elif httpMethod == getMethod and path == customerItemPath:
+        response = getCustomerItem(event['queryStringParameters']['customerId'], event['queryStringParameters']['attributeToSearch'])    
     elif httpMethod == patchMethod and path == customerPath:
         requestBody = json.loads(event['body'])
         response = modifyCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
-    elif httpMethod == getMethod and path == customerApiKey:
-        response = getCustomerApiKey(event['queryStringParameters']['customerId'])
-    elif httpMethod == getMethod and path == customerApiSecret:
-        response = getCustomerApiSecret(event['queryStringParameters']['customerId'])  
+
+    # elif httpMethod == getMethod and path == customerApiKey:
+    #     response = getCustomerApiKey(event['queryStringParameters']['customerId'])
+    # elif httpMethod == getMethod and path == customerApiSecret:
+    #     response = getCustomerApiSecret(event['queryStringParameters']['customerId'])  
+    # elif httpMethod == getMethod and path == customerRunning_status:
+    #     response = getCustomerRunningStatus(event['queryStringParameters']['customerId'])  
 
     elif httpMethod == postMethod and path == orderConfigPath:
         response = saveOrderConfig(json.loads(event['body']))
@@ -805,8 +811,10 @@ deleteMethod = 'DELETE'
 healthPath = '/health'
 customerPath = '/customer'
 customersPath = '/customers'
-customerApiKey = '/customer/api-key'
-customerApiSecret = '/customer/api-secret'
+customerItemPath = '/customer/customerItem'
+
+# customerApiSecret = '/customer/api-secret'
+# customerRunning_status = '/customer/running_status'
 
 orderConfigPath = '/orderConfiguration'
 orderConfigPathAll = '/orderConfiguration/allData'
@@ -814,6 +822,13 @@ orderConfigPathAll = '/orderConfiguration/allData'
 botOutputPath = '/botOutput'
 
 marketDetails = '/marketDetails'
+
+
+
+
+
+
+
 
 # Check status code.
 def buildResponse(statusCode, body=None):
@@ -848,6 +863,27 @@ def getCustomer(customerId):
         return error_handle
 
 
+def getCustomerItem(customerId, attributeToSearch):
+    try:
+        customerId = str(customerId)
+        response = customer_table.get_item(
+            Key={'customerId': customerId}
+        )
+        if 'Item' in response:
+            customer_item = response['Item']
+            data = customer_item.get(attributeToSearch)
+
+            if data is not None:
+                return buildResponse(200, data)
+            else:
+                return buildResponse(404, {'Message': f'Attribute not found for customerId: {customerId}'})
+        else:
+            return buildResponse(404, {'Message': f'Item not found for customerId: {customerId}'})
+    except Exception as e:
+        logger.exception(f"{e}")
+        return buildResponse(500, {'Message': 'Failed to retrieve item'})
+    
+    
 def modifyCustomerInfo(customerId, updateKey, updateValue):
     try:
         response = customer_table.update_item(
@@ -994,6 +1030,28 @@ def getCustomerApiSecret(customerId):
         error_handle = logger.exception(f"{e}")
         return error_handle
 
+def getCustomerRunningStatus(customerId):
+    try:
+        # customerId = int(customerId)
+        response = customer_table.get_item(
+            Key={
+                'customerId': customerId
+            }
+        )
+        if 'Item' in response:
+            customer_data = response['Item']
+            running_status = customer_data.get('running_status')
+            
+            if running_status is not None:
+                return buildResponse(200, running_status)
+            else:
+                return buildResponse(400, {'Message': 'API key not found for customerId: %s' % customerId})
+        else:
+            return buildResponse(400, {'Message': 'customerId: %s not found' % customerId})
+    except Exception as e:
+        error_handle = logger.exception(f"{e}")
+        return error_handle
+    
     
 def getBotResult(display_id):
     try:
