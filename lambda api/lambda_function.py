@@ -600,7 +600,7 @@ def lambda_handler(event, context):
                     update_price_float = float(update_price_result)
                     if total_buy < max_buy and rsi <= 30 and buy_check == 0:
                         
-                        fiat_limit_buy(product_id, btc_size)
+                        # fiat_limit_buy(product_id, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                         total_buy += 1
@@ -619,7 +619,7 @@ def lambda_handler(event, context):
 
                     elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
                         
-                        fiat_limit_sell(product_id, sell_btc_size)
+                        # fiat_limit_sell(product_id, sell_btc_size)
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
                         sell_counter += 1
 
@@ -718,7 +718,7 @@ def lambda_handler(event, context):
                     update_price_float = float(update_price_result)
                     if total_buy < max_buy and rsi <= 30 and buy_check == 0:
                         
-                        fiat_limit_buy(product_id, btc_size)
+                        # fiat_limit_buy(product_id, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                         total_buy += 1
@@ -737,7 +737,7 @@ def lambda_handler(event, context):
 
                     elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
                         
-                        fiat_limit_sell(product_id, sell_btc_size)
+                        # fiat_limit_sell(product_id, sell_btc_size)
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
                        
 
@@ -756,6 +756,19 @@ def lambda_handler(event, context):
                     print('Skipping due to an error in obtaining the current price.')
             else:
                 print('Not found')
+
+                customerId=customerId
+                moving_average = 0
+                closing_price_result = 0
+                update_price_result = "0"
+                trade_buy_amount = 0
+                trade_sell_amount = 0
+                rsi = 0
+                symbol = 'null'
+
+                update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
+                                update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
+                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
 
     else:
         print("No customer IDs found in the table.")
