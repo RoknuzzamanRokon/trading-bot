@@ -501,12 +501,7 @@ def lambda_handler(event, context):
             if 'body' in USD_Size:
                 symbol_str = USD_Size['body']
                 USD_Size_strip = symbol_str.strip('\"')
-            
 
-            USD_Size = float(USD_Size_strip)
-            print(f"USD SIZE: {USD_Size}")
-            btc_size = float(USD_Size)
-            sell_btc_size = btc_size + 0.06
 
             buy_check = get_buy_counter(customerId=customer_id)
             print(f"THis is sell check: {buy_check}")
@@ -521,11 +516,18 @@ def lambda_handler(event, context):
 
 
             # Add logic for entering trad.
-            if symbol_str_strip == 'ETH' and product_id_str_strip == 'ETH-USD' and running_status_body_strip == "ON": 
+            if running_status_body_strip == "ON": 
                 symbol = symbol_str_strip
+                product_id = product_id_str_strip
                 
+                USD_Size = float(USD_Size_strip)
+                print(f"USD SIZE: {USD_Size}")
+                btc_size = float(USD_Size)
+                sell_btc_size = btc_size + 0.06
+
+
                 print("----------------------------------------------------------------------------")
-                print("Hey, I'm 'ETH' here.")
+                print(f"Hey, I'm {product_id} here.")
                 buy_check = get_buy_counter(customerId=customer_id)
                 print("Get data form db buy:", buy_check)
                 sell_check = get_sell_counter(customerId=customer_id)
@@ -546,6 +548,7 @@ def lambda_handler(event, context):
                     update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
             
                 get_current_price_db = get_current_price(customerId=customer_id)
+                print(f"Get current price in DB: {get_current_price}")
                 
                 historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
                 # print(f"last month price: {historical_prices}")
@@ -586,7 +589,7 @@ def lambda_handler(event, context):
                 round_trade_buy_amount = round(trade_buy_amount, 2)
                 round_trade_sell_amount = round(trade_sell_amount, 2)
                 round_rsi = round(rsi, 2)
-                symbol = "ETH"
+                symbol = symbol_str_strip
                 
                 # Bot output update in database.
                 update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
@@ -636,124 +639,6 @@ def lambda_handler(event, context):
 
                 else:
                     print('Skipping due to an error in obtaining the current price.')
-            
-            # Add logic for entering trad.
-            elif symbol_str_strip == 'BTC' and product_id_str_strip == 'BTC-USD' and running_status_body_strip == "ON": 
-                symbol = symbol_str_strip
-                
-                print("----------------------------------------------------------------------------")
-                print("Hey, I'm 'BTC' here.")
-                buy_check = get_buy_counter(customerId=customer_id)
-                print("Get data form db buy:", buy_check)
-                sell_check = get_sell_counter(customerId=customer_id)
-                print("Get data form db sell:", sell_check)
-                
-                total_buy = get_total_buy(customerId=customer_id)
-                print(f"Total buy: {total_buy}")
-                total_sell = get_total_sell(customerId=customer_id)
-                print(f"Total sell: {total_sell}")
-
-                if buy_check is None: 
-                    customerId=customer_id
-                    set_buy=0
-                    set_sell=0
-                    total_buy=0
-                    total_sell=0
-                    current_price=0
-                    update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price)
-                    
-                
-                get_current_price_db = get_current_price(customerId=customer_id)
-                
-                historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
-                print(type(historical_prices))
-                moving_average = calculate_moving_average(historical_prices, window_size)
-                print(f'Moving Average: {moving_average}')
-
-                closing_price_result = get_last_day_closing_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(f"Closing price: {closing_price_result} \n")
-                
-                update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(f"Current Price: {update_price_result} \n")
-                    
-                trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
-                print(f"Buy Amount Price: {trade_buy_amount}")
-                
-            
-                
-                if buy_check == 0:
-                    trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
-                    print(f"Sell Amount Price: {trade_sell_amount} \n")
-                    
-                else:
-                    trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
-                    print(f"Sell Amount Price: {trade_sell_amount} \n")
-
-
-                closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
-
-                if not isinstance(closing_prices, str):
-                    
-                    rsi = calculate_rsi(closing_prices, window_size_for_rsi)
-                    print(f'The RSI for the result candle prices per minute is: {rsi}')
-                
-                customerId = customer_id
-                # Rounded all value in 2 decimal places.
-                round_moving_average = round(moving_average, 2)
-                round_closing_price_result = round(closing_price_result, 2)
-                round_trade_buy_amount = round(trade_buy_amount, 2)
-                round_trade_sell_amount = round(trade_sell_amount, 2)
-                round_rsi = round(rsi, 2)
-                symbol = "BTC"
-
-                # Bot output update in database.
-                update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
-                                update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
-                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
-                
-                
-                set_api_credentials(api_key_body_strip, api_secret_body_strip)
-
-                if update_price_result is not None:
-                    update_price_float = float(update_price_result)
-                    if total_buy < max_buy and rsi <= 30 and buy_check == 0:
-                        
-                        # fiat_limit_buy(product_id, btc_size)
-
-                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
-                        total_buy += 1
-                        total_sell += 0
-                        
-                        current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                        print(type(current_price))
-
-                        set_buy = 1
-                        set_sell = 0
-
-                        customerId = customer_id
-
-                        update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price)
-                    
-
-                    elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
-                        
-                        # fiat_limit_sell(product_id, sell_btc_size)
-                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                       
-
-                        total_buy += 0
-                        total_sell += 1
-
-                        reset_buy = 0
-                        reset_sell = 0
-                        reset_current_price = 0
-
-                        customerId = customer_id
-                        
-                        update_buy_sell_counter(customerId=customerId, buy_count=reset_buy, sell_count=reset_sell, total_buy=total_buy, total_sell=total_sell, current_price=reset_current_price)
-                    
-                else:
-                    print('Skipping due to an error in obtaining the current price.')
             else:
                 print('Not found')
 
@@ -788,13 +673,6 @@ def lambda_handler(event, context):
         requestBody = json.loads(event['body'])
         response = modifyCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
 
-    # elif httpMethod == getMethod and path == customerApiKey:
-    #     response = getCustomerApiKey(event['queryStringParameters']['customerId'])
-    # elif httpMethod == getMethod and path == customerApiSecret:
-    #     response = getCustomerApiSecret(event['queryStringParameters']['customerId'])  
-    # elif httpMethod == getMethod and path == customerRunning_status:
-    #     response = getCustomerRunningStatus(event['queryStringParameters']['customerId'])  
-
     elif httpMethod == postMethod and path == orderConfigPath:
         response = saveOrderConfig(json.loads(event['body']))
     elif httpMethod == getMethod and path == orderConfigPath:
@@ -813,8 +691,6 @@ def lambda_handler(event, context):
     
     else:
         response = buildResponse(400, {'message': 'Not Found'})
-    
-    time.sleep(update_time)
     
     return response
 
@@ -845,9 +721,6 @@ marketDetails = '/marketDetails'
 
 
 
-
-
-
 # Check status code.
 def buildResponse(statusCode, body=None):
     response = {
@@ -860,7 +733,6 @@ def buildResponse(statusCode, body=None):
     if body is not None:
         response['body'] = json.dumps(body, cls=CustomEncoder)
     return response
-
 
 
     
@@ -1048,6 +920,7 @@ def getCustomerApiSecret(customerId):
         error_handle = logger.exception(f"{e}")
         return error_handle
 
+
 def getCustomerRunningStatus(customerId):
     try:
         # customerId = int(customerId)
@@ -1087,7 +960,6 @@ def getBotResult(display_id):
         error_handle = logger.exception(f"{e}")
         return error_handle
     
-
   
 
 def getBotCounterResult(counter_id):
