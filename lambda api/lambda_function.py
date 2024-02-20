@@ -805,6 +805,9 @@ def lambda_handler(event, context):
     elif httpMethod == getMethod and path == botOutputPath:
         response = getBotResult(event['queryStringParameters']['display_id'])
 
+    elif httpMethod == getMethod and path == botCounterPath:
+        response = getBotCounterResult(event['queryStringParameters']['counter_id'])
+
     elif httpMethod == getMethod and path == marketDetails:
         response = getCoinMarketCap()
     
@@ -833,6 +836,8 @@ orderConfigPath = '/orderConfiguration'
 orderConfigPathAll = '/orderConfiguration/allData'
 
 botOutputPath = '/botOutput'
+
+botCounterPath = '/botCounter'
 
 marketDetails = '/marketDetails'
 
@@ -1084,3 +1089,20 @@ def getBotResult(display_id):
     
 
   
+
+def getBotCounterResult(counter_id):
+    try:
+        counter_id = str(counter_id)
+        response = table.get_item(
+            Key={
+                'counter_id': counter_id
+            }
+        )
+        if 'Item' in response:
+            return buildResponse(200, response['Item'])
+        else:
+            return buildResponse(400, {'Message': 'customerId: %s not found' % counter_id})
+    except Exception as e:
+        error_handle = logger.exception(f"{e}")
+        return error_handle
+    
