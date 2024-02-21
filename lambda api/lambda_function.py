@@ -262,14 +262,15 @@ def decide_trade_action(rsi_value):
         return "Hold"
     
 
-def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell,current_price):
+def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell,current_price,last_buySell_status):
     data_to_insert = {
             'counter_id': str(customerId), 
             'buy_counter': int(buy_count),
             'sell_counter': int(sell_count),
             'total_buy': int(total_buy),
             'total_sell': int(total_sell),
-            'current_price': Decimal(current_price)
+            'current_price': Decimal(current_price),
+            'last_buySell_status':str(last_buySell_status)
         }
         
     try:
@@ -545,7 +546,8 @@ def lambda_handler(event, context):
                     total_buy=0
                     total_sell=0
                     current_price=0
-                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price)
+                    last_buySell_status='-'
+                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price, last_buySell_status)
             
                 get_current_price_db = get_current_price(customerId=customer_id)
                 print(f"Get current price in DB: {get_current_price}")
@@ -617,7 +619,9 @@ def lambda_handler(event, context):
 
                         customerId = customer_id
 
-                        update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price)
+                        last_buySell_status = 'Buy'
+
+                        update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price, last_buySell_status=last_buySell_status)
                     
 
                     elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
@@ -635,7 +639,8 @@ def lambda_handler(event, context):
 
                         customerId = customer_id         
 
-                        update_buy_sell_counter(customerId=customerId, buy_count=reset_buy, sell_count=reset_sell, total_buy=total_buy, total_sell=total_sell, current_price=reset_current_price)
+                        last_buySell_status = 'sell'
+                        update_buy_sell_counter(customerId=customerId, buy_count=reset_buy, sell_count=reset_sell, total_buy=total_buy, total_sell=total_sell, current_price=reset_current_price, last_buySell_status=last_buySell_status)
 
                 else:
                     print('Skipping due to an error in obtaining the current price.')
