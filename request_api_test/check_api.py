@@ -1,10 +1,13 @@
-from coinbase_advanced_trader.config import set_api_credentials
+from coinbase.wallet.client import Client
 
-api_key = 'EWh5SIcfD8rX8vb6'
-api_secret = 'TLgCQKh0HrAVxsCkyuLBgL7QLj1kR15U'
+# Replace 'YOUR_API_KEY' and 'YOUR_API_SECRET' with your actual API key and secret
+api_key = 'EWh5SD8rX8vb6'
+api_secret = 'TLgCKhAVxsCkyuLBgL7QLj1kR15U'
 
+client = Client(api_key, api_secret)
 
-# Set the API credentials once, and it updates the CBAuth singleton instance
-set_api_credentials(api_key, api_secret)
-
-print(set_api_credentials.json())
+try:
+    user = client.get_current_user()
+    print("API key is valid.")
+except Exception as e:
+    print("API key is invalid. Error:", e)  
