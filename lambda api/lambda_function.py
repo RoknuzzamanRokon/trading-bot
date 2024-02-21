@@ -282,7 +282,7 @@ def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell
         return None
 
 
-def update_configuration_table(customerId,symbol,usd_size,product_id,max_buy,max_sell,PROFIT_PERCENTAGE, LOSS_PERCENTAGE):
+def update_configuration_table(customerId,symbol,usd_size,product_id,max_buy,max_sell,PROFIT_PERCENTAGE, LOSS_PERCENTAGE, isSubmitted):
     data_to_insert = {
             'customerId': str(customerId), 
             'symbol': str(symbol),
@@ -291,7 +291,8 @@ def update_configuration_table(customerId,symbol,usd_size,product_id,max_buy,max
             'max_buy': Decimal(max_buy),
             'max_sell': Decimal(max_sell),
             'PROFIT_PERCENTAGE': str(PROFIT_PERCENTAGE),
-            'LOSS_PERCENTAGE': str(LOSS_PERCENTAGE)
+            'LOSS_PERCENTAGE': str(LOSS_PERCENTAGE),
+            'isSubmitted': bool(isSubmitted)
         }
         
     try:
@@ -426,7 +427,8 @@ def lambda_handler(event, context):
                     max_sell=0
                     PROFIT_PERCENTAGE="1.0"
                     LOSS_PERCENTAGE="1.0"
-                    update_configuration_table(customerId,symbol, usd_size, product_id, max_buy, max_sell, PROFIT_PERCENTAGE, LOSS_PERCENTAGE)
+                    isSubmitted = True
+                    update_configuration_table(customerId,symbol, usd_size, product_id, max_buy, max_sell, PROFIT_PERCENTAGE, LOSS_PERCENTAGE, isSubmitted)
 
             
             
