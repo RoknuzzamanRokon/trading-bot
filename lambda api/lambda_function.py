@@ -597,7 +597,7 @@ def lambda_handler(event, context):
                 # Bot output update in database.
                 update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
                                 update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
-                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol_str_strip)
+                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
                 
                 
                 set_api_credentials(api_key_body_strip, api_secret_body_strip)
@@ -645,10 +645,21 @@ def lambda_handler(event, context):
 
                 else:
                     print('Skipping due to an error in obtaining the current price.')
-            else:
-                print('Not found')
 
-                customerId=customerId
+            elif running_status_body_strip == "OFF":
+                print(f'Hey my running status is of: {running_status_body}')
+
+                customerId=customer_id
+                set_buy=0
+                set_sell=0
+                total_buy=0
+                total_sell=0
+                current_price=0
+                last_buySell_status='-'
+                update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price, last_buySell_status)
+        
+
+                
                 moving_average = 0
                 closing_price_result = 0
                 update_price_result = "0"
@@ -657,9 +668,9 @@ def lambda_handler(event, context):
                 rsi = 0
                 symbol = 'null'
 
-                update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
-                                update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
-                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
+                update_bot_output(customerId=customerId, moving_average=moving_average, closing_price_result=closing_price_result,
+                                update_price_result=update_price_result, trade_buy_amount=trade_buy_amount, 
+                                trade_sell_amount=trade_sell_amount, rsi=rsi, symbol=symbol)
 
     else:
         print("No customer IDs found in the table.")
