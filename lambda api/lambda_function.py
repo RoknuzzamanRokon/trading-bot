@@ -591,12 +591,11 @@ def lambda_handler(event, context):
                 round_trade_buy_amount = round(trade_buy_amount, 2)
                 round_trade_sell_amount = round(trade_sell_amount, 2)
                 round_rsi = round(rsi, 2)
-                symbol = symbol_str_strip
                 
                 # Bot output update in database.
                 update_bot_output(customerId=customerId, moving_average=round_moving_average, closing_price_result=round_closing_price_result,
                                 update_price_result=update_price_result, trade_buy_amount=round_trade_buy_amount, 
-                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol)
+                                trade_sell_amount=round_trade_sell_amount, rsi=round_rsi, symbol=symbol_str_strip)
                 
                 
                 set_api_credentials(api_key_body_strip, api_secret_body_strip)
