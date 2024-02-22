@@ -566,17 +566,20 @@ def lambda_handler(event, context):
                 update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
                 print(f"Current Price: {update_price_result} \n")
 
-                trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
+
+                profit_amount_default = 1.0
+                loss_amount_default = 1.0
+
+
+                trade_buy_amount = loss_amount(closing_price_result, loss_amount_default)
                 print(f"Buy Amount Price: {trade_buy_amount}")
                 
-            
-                
                 if buy_check == 0:
-                    trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
+                    trade_sell_amount = profit_amount(closing_price_result, profit_amount_default)
                     print(f"Sell Amount Price: {trade_sell_amount} \n")
                     
                 else:
-                    trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
+                    trade_sell_amount = profit_amount(get_current_price_db, profit_amount_default)
                     print(f"Sell Amount Price: {trade_sell_amount} \n")
                     
                 closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
