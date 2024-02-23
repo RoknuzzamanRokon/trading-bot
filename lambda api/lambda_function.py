@@ -472,9 +472,11 @@ def lambda_handler(event, context):
                 if 'body' in profit_count:
                     symbol_str = profit_count['body']
                     profit_count_strip = symbol_str.strip('\"')
-                    print(profit_count_strip)
+                    print(f"profit profit check into db:---------------{profit_count_strip}")
                     print(type(profit_count_strip))
                     profit_count_strip_int = float(profit_count_strip)
+                    print(type(profit_count_strip_int))
+                    
 
                 loss_count = getOrderConfig(customerId=customer_id, attributeToSearch='LOSS_PERCENTAGE')
                 if 'body' in loss_count:
@@ -489,6 +491,8 @@ def lambda_handler(event, context):
                     symbol_str = max_buy_count['body']
                     max_buy_count_strip = symbol_str.strip('\"')
                     float_max_buy_count_strip = float(max_buy_count_strip)
+                    print(type(loss_count_strip_int))
+                    print(f"Loss profit check into db:---------------{loss_count_strip_int}")
 
                 max_sell_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_sell')
                 if 'body' in max_sell_count:
@@ -553,7 +557,8 @@ def lambda_handler(event, context):
                         update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price, last_buySell_status)
                 
                     get_current_price_db = get_current_price(customerId=customer_id)
-                    print(f"Get current price in DB: {get_current_price}")
+                    print(type(get_current_price_db))
+                    print(f"Get current price in DB: {get_current_price_db}")
                     
                     historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
                     # print(f"last month price: {historical_prices}")
@@ -573,6 +578,7 @@ def lambda_handler(event, context):
 
 
                     trade_buy_amount = loss_amount(closing_price_result, loss_amount_default)
+                    print(type(trade_buy_amount))
                     print(f"Buy Amount Price: {trade_buy_amount}")
                     
                     if buy_check == 0:
@@ -584,7 +590,7 @@ def lambda_handler(event, context):
                         print(f"Sell Amount Price: {trade_sell_amount} \n")
                         
                     closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
-
+                    print(f"get_last_60_closing_prices: {closing_prices}")
                     if not isinstance(closing_prices, str):
                         
                         rsi = calculate_rsi(closing_prices, window_size_for_rsi)
@@ -608,7 +614,7 @@ def lambda_handler(event, context):
 
                     if update_price_result is not None:
                         update_price_float = float(update_price_result)
-                        if total_buy < max_buy and rsi <= 30 and buy_check == 0:
+                        if total_buy < max_buy and rsi <= 30 and buy_check == 0 and trade_buy_amount >= current_price:
                             
                             # fiat_limit_buy(product_id, btc_size)
 
@@ -617,6 +623,7 @@ def lambda_handler(event, context):
                             total_sell += 0
                             
                             current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
+                            print(f"Get current price from coinbase: {current_price}")
                             print(type(current_price))
 
                             set_buy = 1
@@ -629,7 +636,7 @@ def lambda_handler(event, context):
                             update_buy_sell_counter(customerId=customerId, buy_count=set_buy, sell_count=set_sell, total_buy=total_buy, total_sell=total_sell, current_price=current_price, last_buySell_status=last_buySell_status)
                         
 
-                        elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
+                        elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float and rsi >= 50:
                             
                             # fiat_limit_sell(product_id, sell_btc_size)
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -658,9 +665,9 @@ def lambda_handler(event, context):
                     set_sell=0
                     total_buy=0
                     total_sell=0
-                    current_price=0
+                    current_price_set_value=0
                     last_buySell_status='-'
-                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price, last_buySell_status)
+                    update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price_set_value, last_buySell_status)
             
 
                     
