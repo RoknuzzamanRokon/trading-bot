@@ -41,6 +41,9 @@ order_configuration_table = dynamodb.Table(table_3)
 table_4 = 'bot-output-table'
 bot_output_table = dynamodb.Table(table_4)
 
+table_5 = 'valid-customer-table'
+valid_customer_table = dynamodb.Table(table_5)
+
 
 
 
@@ -262,7 +265,21 @@ def decide_trade_action(rsi_value):
     else:
         return "Hold"
     
-
+def valid_customer(customerId, api_key, api_secret):
+    data_to_insert = {
+        'counter_id': str(customerId),
+        'is_valid': True,
+        'api_key': str(api_key),
+        'api_secret': str(api_secret)
+    }
+    try:
+        response = valid_customer_table.put_item(Item=data_to_insert)
+        return response
+    except Exception as e:
+        print(f'Error updating valid customer: {e}')
+        return None
+    
+    
 def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell,current_price,last_buySell_status):
     data_to_insert = {
             'counter_id': str(customerId), 
@@ -448,7 +465,7 @@ def lambda_handler(event, context):
             client_validation_check = Client(api_key_body_strip, api_secret_body_strip)
 
             try:
-                user = client_validation_check.get_current_user()
+                user_check = client_validation_check.get_current_user()
                 print("API key is valid.")
             except Exception as e:
                 print("API key is invalid. Error:", e)
