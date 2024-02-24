@@ -438,20 +438,6 @@ def lambda_handler(event, context):
         for customer_id in customer_ids:
             print(f"***********************------------------CustomerId:{customer_id}")
 
-            if customer_id not in configuration_customer_ids: 
-                    customerId=customer_id
-                    symbol="BTC"
-                    usd_size=0
-                    product_id="BTC-USD"
-                    max_buy=0
-                    max_sell=0
-                    PROFIT_PERCENTAGE="1.0"
-                    LOSS_PERCENTAGE="1.0"
-                    isSubmitted = True
-                    update_configuration_table(customerId,symbol, usd_size, product_id, max_buy, max_sell, PROFIT_PERCENTAGE, LOSS_PERCENTAGE, isSubmitted)
-
-            
-            
             api_key = getCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
             if 'body' in api_key:
                 api_key_body = api_key['body']
@@ -468,8 +454,31 @@ def lambda_handler(event, context):
             try:
                 user_check = client_validation_check.get_current_user()
                 print("API key is valid.")
+
+                check_europe = user_check['country']['is_in_europe']
+                is_valid = True,
+                is_in_europe = check_europe                
+                valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key_body_strip, api_secret=api_secret_body_strip)
+            
             except Exception as e:
                 print("API key is invalid. Error:", e)
+
+
+            if customer_id not in configuration_customer_ids: 
+                    customerId=customer_id
+                    symbol="BTC"
+                    usd_size=0
+                    product_id="BTC-USD"
+                    max_buy=0
+                    max_sell=0
+                    PROFIT_PERCENTAGE="1.0"
+                    LOSS_PERCENTAGE="1.0"
+                    isSubmitted = True
+                    update_configuration_table(customerId,symbol, usd_size, product_id, max_buy, max_sell, PROFIT_PERCENTAGE, LOSS_PERCENTAGE, isSubmitted)
+
+            
+            
+            
 
                 
             running_status = getCustomerItem(customerId=customer_id, attributeToSearch='running_status')
