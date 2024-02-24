@@ -265,10 +265,11 @@ def decide_trade_action(rsi_value):
     else:
         return "Hold"
     
-def valid_customer(customerId, api_key, api_secret):
+def valid_customer(customerId, is_valid, is_in_europe, api_key, api_secret):
     data_to_insert = {
-        'counter_id': str(customerId),
-        'is_valid': True,
+        'customerId': str(customerId),
+        'is_valid': bool(is_valid),
+        'is_in_europe': bool(is_in_europe),
         'api_key': str(api_key),
         'api_secret': str(api_secret)
     }
@@ -279,7 +280,7 @@ def valid_customer(customerId, api_key, api_secret):
         print(f'Error updating valid customer: {e}')
         return None
     
-    
+
 def update_buy_sell_counter(customerId,buy_count,sell_count,total_buy,total_sell,current_price,last_buySell_status):
     data_to_insert = {
             'counter_id': str(customerId), 
