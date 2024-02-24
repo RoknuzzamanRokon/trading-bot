@@ -464,6 +464,8 @@ def lambda_handler(event, context):
                 print("API key is invalid. Error:", e)
 
 
+
+
             # Scan valid customer id from database.
             response_for_valid_customer_from_table = valid_customer.scan(projectionExpression='customerId')
             valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
@@ -691,7 +693,6 @@ def lambda_handler(event, context):
                             
                             # fiat_limit_sell(product_id, sell_btc_size)
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                            sell_counter += 1
 
                             total_buy += 0
                             total_sell += 1
