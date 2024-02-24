@@ -15,6 +15,7 @@ from boto3.dynamodb.conditions import Attr,Key
 import math
 from requests import Request, Session
 from requests.exceptions import ConnectionError, Timeout, TooManyRedirects
+from coinbase.wallet.client import Client
 
 
 logger = logging.getLogger()
@@ -442,6 +443,16 @@ def lambda_handler(event, context):
             if 'body' in api_secret:
                 api_secret_body = api_secret['body']
                 api_secret_body_strip = api_secret_body.strip('\"')
+
+            # Client validation check here.
+            client_validation_check = Client(api_key_body_strip, api_secret_body_strip)
+
+            try:
+                user = client_validation_check.get_current_user()
+                print("API key is valid.")
+            except Exception as e:
+                print("API key is invalid. Error:", e)
+
                 
             running_status = getCustomerItem(customerId=customer_id, attributeToSearch='running_status')
             if 'body' in running_status:
