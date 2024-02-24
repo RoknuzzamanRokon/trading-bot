@@ -463,7 +463,11 @@ def lambda_handler(event, context):
             except Exception as e:
                 print("API key is invalid. Error:", e)
 
+            # Scan valid customer id from database.
+            response_for_valid_customer_from_table = valid_customer.scan(projectionExpression='customerId')
+            valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
 
+            valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
             if customer_id not in configuration_customer_ids: 
                     customerId=customer_id
                     symbol="BTC"
