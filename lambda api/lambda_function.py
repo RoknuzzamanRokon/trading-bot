@@ -570,7 +570,7 @@ def lambda_handler(event, context):
 
 
                 buy_check = get_buy_counter(customerId=customer_id)
-                print(f"THis is sell check: {buy_check}")
+                print(f"THis is buy check: {buy_check}")
                 sell_check = get_sell_counter(customerId=customer_id)
                 print(f"THis is sell check: {sell_check}")
                 
@@ -847,6 +847,27 @@ def getCustomerItem(customerId, attributeToSearch):
                 return buildResponse(200, data)
             else:
                 return buildResponse(404, {'Message': f'Attribute not found for customerId: {customerId}'})
+        else:
+            return buildResponse(404, {'Message': f'Item not found for customerId: {customerId}'})
+    except Exception as e:
+        logger.exception(f"{e}")
+        return buildResponse(500, {'Message': 'Failed to retrieve item'})
+    
+
+def getValidCustomerItem(customerId, attributeToSearch):
+    try:
+        customerId = str(customerId)
+        response = valid_customer_table.get_item(
+            Key={'customerId': customerId}
+        )
+        if 'Item' in response:
+            valid_customer_item = response['Item']
+            data = valid_customer_item.get(attributeToSearch)
+
+            if data is not None:
+                return buildResponse(200, data)
+            else:
+                return buildResponse(400, {'Message': f'Attribute not found for customerId: {customerId}'})
         else:
             return buildResponse(404, {'Message': f'Item not found for customerId: {customerId}'})
     except Exception as e:
