@@ -265,13 +265,14 @@ def decide_trade_action(rsi_value):
     else:
         return "Hold"
     
-def valid_customer(customerId, is_valid, is_in_europe, api_key, api_secret):
+def valid_customer(customerId, is_valid, is_in_europe, api_key, api_secret, running_status):
     data_to_insert = {
         'customerId': str(customerId),
         'is_valid': bool(is_valid),
         'is_in_europe': bool(is_in_europe),
         'api_key': str(api_key),
-        'api_secret': str(api_secret)
+        'api_secret': str(api_secret),
+        'running_status': str(running_status)
     }
     try:
         response = valid_customer_table.put_item(Item=data_to_insert)
@@ -456,9 +457,10 @@ def lambda_handler(event, context):
                 print("API key is valid.")
 
                 check_europe = user_check['country']['is_in_europe']
-                is_valid = True,
-                is_in_europe = check_europe                
-                valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key_body_strip, api_secret=api_secret_body_strip)
+                is_valid = True
+                is_in_europe = check_europe
+                running_status = 'ON'                
+                valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key_body_strip, api_secret=api_secret_body_strip, running_status=running_status)
             
             except Exception as e:
                 print("API key is invalid. Error:", e)
@@ -475,12 +477,12 @@ def lambda_handler(event, context):
                 for customer_id in valid_customer_ids:
                     print("I am valid customer: ")
 
-                api_key = getCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
+                api_key = getValidCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
                 if 'body' in api_key:
                     api_key_body = api_key['body']
                     api_key_body_strip = api_key_body.strip('\"')
 
-                api_secret = getCustomerItem(customerId=customer_id, attributeToSearch='apiSecret')
+                api_secret = getValidCustomerItem(customerId=customer_id, attributeToSearch='apiSecret')
                 if 'body' in api_secret:
                     api_secret_body = api_secret['body']
                     api_secret_body_strip = api_secret_body.strip('\"')
@@ -501,7 +503,7 @@ def lambda_handler(event, context):
 
 
                     
-                running_status = getCustomerItem(customerId=customer_id, attributeToSearch='running_status')
+                running_status = getValidCustomerItem(customerId=customer_id, attributeToSearch='running_status')
                 if 'body' in running_status:
                     running_status_body = running_status['body']
                     running_status_body_strip = running_status_body.strip('\"')
@@ -626,20 +628,20 @@ def lambda_handler(event, context):
                     print(f"Current Price: {update_price_result} \n")
 
 
-                    profit_amount_default = 1.0
-                    loss_amount_default = 1.0
+                    # profit_amount_default = 1.0
+                    # loss_amount_default = 1.0
 
 
-                    trade_buy_amount = loss_amount(closing_price_result, loss_amount_default)
+                    trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
                     print(type(trade_buy_amount))
                     print(f"Buy Amount Price: {trade_buy_amount}")
                     
                     if buy_check == 0:
-                        trade_sell_amount = profit_amount(closing_price_result, profit_amount_default)
+                        trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
                         print(f"Sell Amount Price: {trade_sell_amount} \n")
                         
                     else:
-                        trade_sell_amount = profit_amount(get_current_price_db, profit_amount_default)
+                        trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
                         print(f"Sell Amount Price: {trade_sell_amount} \n")
                         
                     closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
