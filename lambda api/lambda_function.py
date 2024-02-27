@@ -464,18 +464,18 @@ def lambda_handler(event, context):
             
             except Exception as e:
                 print("API key is invalid. Error:", e)
+                pass
 
 
-
-
-            # Scan valid customer id from database.
-            response_for_valid_customer_from_table = valid_customer.scan(projectionExpression='customerId')
-            valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
+        # Scan valid customer id from database.
+        response_for_valid_customer_from_table = valid_customer_table.scan(ProjectionExpression='customerId')
+        valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
+        
+        if valid_customer_ids:
+            print("This are valid customer.")
             
-            if valid_customer_ids:
-                print("This are valid customer.")
-                for customer_id in valid_customer_ids:
-                    print("I am valid customer: ")
+            for customer_id in valid_customer_ids:
+                print("I am valid customer: ")
 
                 api_key = getValidCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
                 if 'body' in api_key:
