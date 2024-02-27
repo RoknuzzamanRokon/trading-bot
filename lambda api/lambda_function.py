@@ -265,14 +265,15 @@ def decide_trade_action(rsi_value):
     else:
         return "Hold"
     
-def valid_customer(customerId, is_valid, is_in_europe, api_key, api_secret, running_status):
+def valid_customer(customerId, is_valid, is_in_europe, api_key, api_secret, running_status, isSubmitted):
     data_to_insert = {
         'customerId': str(customerId),
         'is_valid': bool(is_valid),
         'is_in_europe': bool(is_in_europe),
         'api_key': str(api_key),
         'api_secret': str(api_secret),
-        'running_status': str(running_status)
+        'running_status': str(running_status),
+        'isSubmitted': bool(isSubmitted)
     }
     try:
         response = valid_customer_table.put_item(Item=data_to_insert)
@@ -459,9 +460,12 @@ def lambda_handler(event, context):
                 check_europe = user_check['country']['is_in_europe']
                 is_valid = True
                 is_in_europe = check_europe
-                running_status = 'ON'                
-                valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key_body_strip, api_secret=api_secret_body_strip, running_status=running_status)
-            
+                running_status = 'ON'
+                isSubmitted = True                
+                valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key_body_strip,
+                                api_secret=api_secret_body_strip, running_status=running_status, isSubmitted=isSubmitted)
+                print("I added in database.")
+
             except Exception as e:
                 print("API key is invalid. Error:", e)
                 pass
@@ -472,10 +476,10 @@ def lambda_handler(event, context):
         valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
         
         if valid_customer_ids:
-            print("This are valid customer.")
+            print(f"This are valid customer.{valid_customer_ids}")
             
             for customer_id in valid_customer_ids:
-                print("I am valid customer: ")
+                print(f"I am valid customer: {customer_id} ")
 
                 api_key = getValidCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
                 if 'body' in api_key:
@@ -533,9 +537,9 @@ def lambda_handler(event, context):
                     symbol_str = profit_count['body']
                     profit_count_strip = symbol_str.strip('\"')
                     print(f"profit profit check into db:---------------{profit_count_strip}")
-                    print(type(profit_count_strip))
+                    # print(type(profit_count_strip))
                     profit_count_strip_int = float(profit_count_strip)
-                    print(type(profit_count_strip_int))
+                    # print(type(profit_count_strip_int))
                     
 
                 loss_count = getOrderConfig(customerId=customer_id, attributeToSearch='LOSS_PERCENTAGE')
@@ -543,7 +547,7 @@ def lambda_handler(event, context):
                     symbol_str = loss_count['body']
                     loss_count_strip = symbol_str.strip('\"')
                     loss_count_strip_int = float(loss_count_strip)
-                    print(type(loss_count_strip_int))
+                    # print(type(loss_count_strip_int))
                     print(f"Loss profit check into db:---------------{loss_count_strip_int}")
 
                 max_buy_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_buy')
@@ -585,10 +589,11 @@ def lambda_handler(event, context):
                     USD_Size = float(USD_Size_strip)
                     print(f"USD SIZE: {USD_Size}")
                     btc_size = float(USD_Size)
-                    sell_btc_size = btc_size + 0.06
+                    # sell_btc_size = btc_size + 0.06
 
 
                     print("----------------------------------------------------------------------------")
+                    print(f"My ID: {customer_id}")
                     print(f"Hey, I'm {product_id} here.")
                     buy_check = get_buy_counter(customerId=customer_id)
                     print("Get data form db buy:", buy_check)
@@ -665,12 +670,17 @@ def lambda_handler(event, context):
                     
                     
                     set_api_credentials(api_key_body_strip, api_secret_body_strip)
+                    print(f"Product Id : {product_id}")
+                    print(type(product_id))
+                    # print(f"Sell btc size: {sell_btc_size}")
+                    # print(type(sell_btc_size))
 
                     if update_price_result is not None:
                         update_price_float = float(update_price_result)
                         if total_buy < max_buy and rsi <= 30 and buy_check == 0:
-                            
-                            # fiat_limit_buy(product_id, btc_size)
+
+                            set_api_credentials(api_key_body_strip, api_secret_body_strip) 
+                            fiat_limit_buy(product_id, btc_size)
 
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                             total_buy += 1
@@ -691,8 +701,9 @@ def lambda_handler(event, context):
                         
 
                         elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
-                            
-                            # fiat_limit_sell(product_id, sell_btc_size)
+
+                            set_api_credentials(api_key_body_strip, api_secret_body_strip)
+                            fiat_limit_sell(product_id, btc_size)
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
                             total_buy += 0

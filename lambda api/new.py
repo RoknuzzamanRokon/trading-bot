@@ -532,6 +532,7 @@ def lambda_handler(event, context):
 
 
                 print("----------------------------------------------------------------------------")
+                print(f"My ID: {customer_id}")
                 print(f"Hey, I'm {product_id} here.")
                 buy_check = get_buy_counter(customerId=customer_id)
                 print("Get data form db buy:", buy_check)
