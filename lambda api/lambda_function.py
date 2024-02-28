@@ -466,10 +466,21 @@ def lambda_handler(event, context):
                 isSubmitted = True                
                 valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key_body_strip,
                                 api_secret=api_secret_body_strip, running_status=running_status, isSubmitted=isSubmitted)
-                print("I added in database.")
+                
+                response_data = {
+                    "status": "success",
+                    "message": "API key is valid. Added in the database."
+                }
+                print(json.dumps(response_data, cls=CustomEncoder))
+
 
             except Exception as e:
                 print("API key is invalid. Error:", e)
+                response_data = {
+                    "status": "error",
+                    "message": f"API key is invalid. Error: {str(e)}"
+                }
+                print(json.dumps(response_data, cls=CustomEncoder))
                 pass
 
 
@@ -777,6 +788,8 @@ def lambda_handler(event, context):
 
     elif httpMethod == getMethod and path == validCustomerPath:
         response = getValidCustomer(event['queryStringParameters']['customerId'])
+    elif httpMethod == getMethod and path == validCustomerItemPath:
+        response = getValidCustomerItem(event['queryStringParameters']['customerId'], event['queryStringParameters']['attributeToSearch'])
     elif httpMethod == patchMethod and path == validCustomerPath:
         requestBody = json.loads(event['body'])
         response = modifyValidCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
@@ -789,6 +802,7 @@ def lambda_handler(event, context):
     elif httpMethod == getMethod and path == orderConfigPathAll:
         response = getOrderConfigAll(event['queryStringParameters']['customerId'])
     
+
     elif httpMethod == getMethod and path == botOutputPath:
         response = getBotResult(event['queryStringParameters']['display_id'])
 
@@ -815,6 +829,7 @@ customersPath = '/customers'
 customerItemPath = '/customer/customerItem'
 
 validCustomerPath = '/validCustomer'
+validCustomerItemPath = '/validCustomer/validCustomerItem'
 
 # customerApiSecret = '/customer/api-secret'
 # customerRunning_status = '/customer/running_status'
@@ -966,15 +981,65 @@ def modifyValidCustomerInfo(customerId, updateKey, updateValue):
         return error_handle
 
 
+# def saveCustomer(requestBody):
+#     try:
+#         customer_table.put_item(Item=requestBody)
+#         body = {
+#             'Operation': 'SAVE',
+#             'Message': 'SUCCESS',
+#             'Item': requestBody
+#         }
+#         return buildResponse(200, body=body)
+#     except Exception as e:
+#         logger.exception(f"{e}")
+#         body = {
+#             'Operation': 'SAVE',
+#             'Message': 'FAILED',
+#             'Error': str(e)
+#         }
+#         return buildResponse(500, body=body)
+
+
 def saveCustomer(requestBody):
     try:
-        customer_table.put_item(Item=requestBody)
-        body = {
-            'Operation': 'SAVE',
-            'Message': 'SUCCESS',
-            'Item': requestBody
-        }
-        return buildResponse(200, body=body)
+        # Extract customerId, apiKey, and apiSecret from the request body
+        customer_id = requestBody.get('customerId')
+        api_key = requestBody.get('apiKey')
+        api_secret = requestBody.get('apiSecret')
+
+        # Client validation check here.
+        client_validation_check = Client(api_key, api_secret)
+
+        try:
+            user_check = client_validation_check.get_current_user()
+            print("API key is valid.")
+
+            check_europe = user_check['country']['is_in_europe']
+            is_valid = True
+            is_in_europe = check_europe
+            running_status = 'ON'
+            isSubmitted = True
+
+            # Save customer data only if API key is valid
+            valid_customer(customerId=customer_id, is_valid=is_valid, is_in_europe=is_in_europe, api_key=api_key,
+                           api_secret=api_secret, running_status=running_status, isSubmitted=isSubmitted)
+
+            body = {
+                'Operation': 'SAVE',
+                'Message': 'SUCCESS',
+                'Item': requestBody
+            }
+            return buildResponse(200, body=body)
+
+        except Exception as e:
+            print("API key is invalid. Error:", e)
+            body = {
+                'Operation': 'SAVE',
+                'Message': 'FAILED',
+                'Error': f"API key is invalid. Error: {str(e)}"
+            }
+            return buildResponse(401, body=body)
+
     except Exception as e:
         logger.exception(f"{e}")
         body = {
