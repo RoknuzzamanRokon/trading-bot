@@ -10,7 +10,8 @@ from custom_encoder import CustomEncoder
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from coinbase_advanced_trader.config import set_api_credentials
-from coinbase_advanced_trader.strategies.fear_and_greed_strategies import trade_based_on_fgi_simple, fiat_limit_sell, fiat_limit_buy
+from coinbase_advanced_trader.strategies.limit_order_strategies import fiat_limit_sell, fiat_limit_buy
+from coinbase_advanced_trader.strategies.market_order_strategies import fiat_market_sell, fiat_market_buy
 from boto3.dynamodb.conditions import Attr,Key
 import math
 from requests import Request, Session
@@ -439,6 +440,7 @@ def lambda_handler(event, context):
         print("Customer IDs:")
         for customer_id in customer_ids:
             print(f"***********************------------------CustomerId:{customer_id}")
+            
 
             api_key = getCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
             if 'body' in api_key:
@@ -680,7 +682,8 @@ def lambda_handler(event, context):
                         if total_buy < max_buy and rsi <= 30 and buy_check == 0:
 
                             set_api_credentials(api_key_body_strip, api_secret_body_strip) 
-                            fiat_limit_buy(product_id, btc_size)
+                            # fiat_limit_buy(product_id, btc_size)
+                            fiat_market_buy(product_id, btc_size)
 
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                             total_buy += 1
@@ -703,7 +706,9 @@ def lambda_handler(event, context):
                         elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
 
                             set_api_credentials(api_key_body_strip, api_secret_body_strip)
-                            fiat_limit_sell(product_id, btc_size)
+                            # fiat_limit_sell(product_id, btc_size)
+                            fiat_market_sell(product_id, btc_size)
+
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
                             total_buy += 0
@@ -765,6 +770,8 @@ def lambda_handler(event, context):
         requestBody = json.loads(event['body'])
         response = modifyCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
 
+    elif httpMethod == getMethod and path == validCustomerPath:
+        response = getValidCustomer(event['queryStringParameters']['customerId'])
     elif httpMethod == postMethod and path == orderConfigPath:
         response = saveOrderConfig(json.loads(event['body']))
     elif httpMethod == getMethod and path == orderConfigPath:
@@ -797,6 +804,8 @@ customerPath = '/customer'
 customersPath = '/customers'
 customerItemPath = '/customer/customerItem'
 
+validCustomerPath = '/validCustomer'
+
 # customerApiSecret = '/customer/api-secret'
 # customerRunning_status = '/customer/running_status'
 
@@ -808,9 +817,6 @@ botOutputPath = '/botOutput'
 botCounterPath = '/botCounter'
 
 marketDetails = '/marketDetails'
-
-
-
 
 
 # Check status code.
@@ -827,7 +833,7 @@ def buildResponse(statusCode, body=None):
     return response
 
 
-    
+
 def getCustomer(customerId):
     try:
         # customerId = int(customerId)
@@ -843,6 +849,23 @@ def getCustomer(customerId):
     except Exception as e:
         error_handle = logger.exception(f"{e}")
         return error_handle
+
+
+def getValidCustomer(customerId):
+    try:
+        response = valid_customer_table.get_item(
+            Key={
+                'customerId': customerId
+            }
+        )
+        if 'Item' in response:
+            return buildResponse(200, response['Item'])
+        else:
+            return buildResponse(400, {'Message': 'customerId: %s not found' % customerId})
+    except Exception as e:
+        error_handle = logger.exception(f"{e}")
+        return error_handle
+    
 
 
 def getCustomerItem(customerId, attributeToSearch):
@@ -864,7 +887,7 @@ def getCustomerItem(customerId, attributeToSearch):
     except Exception as e:
         logger.exception(f"{e}")
         return buildResponse(500, {'Message': 'Failed to retrieve item'})
-    
+
 
 def getValidCustomerItem(customerId, attributeToSearch):
     try:
