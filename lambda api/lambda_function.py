@@ -588,9 +588,9 @@ def lambda_handler(event, context):
                     symbol = symbol_str_strip
                     product_id = product_id_str_strip
                     
-                    USD_Size = float(USD_Size_strip)
+                    USD_Size = Decimal(USD_Size_strip)
                     print(f"USD SIZE: {USD_Size}")
-                    btc_size = float(USD_Size)
+                    btc_size = USD_Size
                     # sell_btc_size = btc_size + 0.06
 
 
@@ -683,6 +683,8 @@ def lambda_handler(event, context):
 
                             set_api_credentials(api_key_body_strip, api_secret_body_strip) 
                             # fiat_limit_buy(product_id, btc_size)
+                            product_id = product_id
+                            btc_size = USD_Size
                             fiat_market_buy(product_id, btc_size)
 
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
@@ -706,7 +708,10 @@ def lambda_handler(event, context):
                         elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
 
                             set_api_credentials(api_key_body_strip, api_secret_body_strip)
+
                             # fiat_limit_sell(product_id, btc_size)
+                            product_id = product_id
+                            btc_size = USD_Size
                             fiat_market_sell(product_id, btc_size)
 
                             print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -772,6 +777,11 @@ def lambda_handler(event, context):
 
     elif httpMethod == getMethod and path == validCustomerPath:
         response = getValidCustomer(event['queryStringParameters']['customerId'])
+    elif httpMethod == patchMethod and path == validCustomerPath:
+        requestBody = json.loads(event['body'])
+        response = modifyValidCustomerInfo(requestBody['customerId'], requestBody['updateKey'], requestBody['updateValue'])
+
+
     elif httpMethod == postMethod and path == orderConfigPath:
         response = saveOrderConfig(json.loads(event['body']))
     elif httpMethod == getMethod and path == orderConfigPath:
@@ -931,7 +941,29 @@ def modifyCustomerInfo(customerId, updateKey, updateValue):
     except Exception as e:
         error_handle = logger.exception(f'{e}')
         return error_handle
+    
 
+def modifyValidCustomerInfo(customerId, updateKey, updateValue):
+    try:
+        response = valid_customer_table.update_item(
+            Key={
+                'customerId': customerId
+            },
+            UpdateExpression = 'set %s = :value' % updateKey,
+            ExpressionAttributeValues={
+                ':value': updateValue
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+        body = {
+            'Operation' : 'UPDATE',
+            'Message' : 'SUCCESS',
+            'UpdatedAttributes' : response
+        }
+        return buildResponse(200, body=body)
+    except Exception as e:
+        error_handle = logger.exception(f'{e}')
+        return error_handle
 
 
 def saveCustomer(requestBody):
