@@ -576,6 +576,7 @@ def lambda_handler(event, context):
                 float_max_sell_count_strip = float(max_sell_count_strip)
 
 
+
             max_buy = float_max_buy_count_strip
             max_sell = float_max_sell_count_strip
 
@@ -748,7 +749,19 @@ def lambda_handler(event, context):
             elif running_status_body_strip == "OFF":
                 print(f'Hey my running status is of: {running_status_body}')
 
-                
+                # customerId = customer_id
+                # symbol = symbol_str_strip
+                # usd_size = USD_Size_strip
+                # product_id = product_id_str_strip
+                # max_buy = 0
+                # max_sell = 0
+                # profit_percentage = profit_count_strip_int
+                # loss_percentage = loss_count_strip_int
+                # isSubmitted = float_isSubmitted_order_configuration_tb_strip
+
+
+                # update_configuration_table(customerId=customer_id, symbol=symbol, usd_size=usd_size, product_id=product_id, max_buy=max_buy,
+                #                             max_sell=max_sell, PROFIT_PERCENTAGE=profit_percentage, LOSS_PERCENTAGE=loss_percentage, isSubmitted=isSubmitted)
 
                 customerId=customer_id
                 set_buy=0
