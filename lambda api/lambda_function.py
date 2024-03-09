@@ -10,7 +10,6 @@ from custom_encoder import CustomEncoder
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from coinbase_advanced_trader.config import set_api_credentials
-from coinbase_advanced_trader.strategies.limit_order_strategies import fiat_limit_sell, fiat_limit_buy
 from coinbase_advanced_trader.strategies.market_order_strategies import fiat_market_sell, fiat_market_buy
 from boto3.dynamodb.conditions import Attr,Key
 import math
@@ -494,12 +493,12 @@ def lambda_handler(event, context):
         for customer_id in valid_customer_ids:
             print(f"I am valid customer: {customer_id} ")
 
-            api_key = getValidCustomerItem(customerId=customer_id, attributeToSearch='apiKey')
+            api_key = getValidCustomerItem(customerId=customer_id, attributeToSearch='api_key')
             if 'body' in api_key:
                 api_key_body = api_key['body']
                 api_key_body_strip = api_key_body.strip('\"')
 
-            api_secret = getValidCustomerItem(customerId=customer_id, attributeToSearch='apiSecret')
+            api_secret = getValidCustomerItem(customerId=customer_id, attributeToSearch='api_secret')
             if 'body' in api_secret:
                 api_secret_body = api_secret['body']
                 api_secret_body_strip = api_secret_body.strip('\"')
@@ -683,6 +682,10 @@ def lambda_handler(event, context):
                 
                 
                 set_api_credentials(api_key_body_strip, api_secret_body_strip)
+                print(f"API credentials: {set_api_credentials}")
+
+                print(f"api key: {api_key_body_strip}")
+                print(f"secret key: {api_secret_body_strip}")
                 print(f"Product Id : {product_id}")
                 print(type(product_id))
                 # print(f"Sell btc size: {sell_btc_size}")
@@ -694,9 +697,9 @@ def lambda_handler(event, context):
 
                         set_api_credentials(api_key_body_strip, api_secret_body_strip) 
                         # fiat_limit_buy(product_id, btc_size)
-                        product_id = product_id
+                        product = product_id
                         btc_size = USD_Size
-                        fiat_market_buy(product_id, btc_size)
+                        fiat_market_buy(product, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
                         total_buy += 1
@@ -721,9 +724,9 @@ def lambda_handler(event, context):
                         set_api_credentials(api_key_body_strip, api_secret_body_strip)
 
                         # fiat_limit_sell(product_id, btc_size)
-                        product_id = product_id
+                        product = product_id
                         btc_size = USD_Size
-                        fiat_market_sell(product_id, btc_size)
+                        fiat_market_sell(product, btc_size)
 
                         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 
@@ -744,6 +747,8 @@ def lambda_handler(event, context):
 
             elif running_status_body_strip == "OFF":
                 print(f'Hey my running status is of: {running_status_body}')
+
+                
 
                 customerId=customer_id
                 set_buy=0
@@ -981,24 +986,6 @@ def modifyValidCustomerInfo(customerId, updateKey, updateValue):
         return error_handle
 
 
-# def saveCustomer(requestBody):
-#     try:
-#         customer_table.put_item(Item=requestBody)
-#         body = {
-#             'Operation': 'SAVE',
-#             'Message': 'SUCCESS',
-#             'Item': requestBody
-#         }
-#         return buildResponse(200, body=body)
-#     except Exception as e:
-#         logger.exception(f"{e}")
-#         body = {
-#             'Operation': 'SAVE',
-#             'Message': 'FAILED',
-#             'Error': str(e)
-#         }
-#         return buildResponse(500, body=body)
-
 
 def saveCustomer(requestBody):
     try:
@@ -1018,6 +1005,7 @@ def saveCustomer(requestBody):
             }
             return buildResponse(200, body=body)
         else:
+            customer_table.put_item(Item=requestBody)
             # API key and secret are provided, perform validation
             client_validation_check = Client(api_key, api_secret)
 
@@ -1028,7 +1016,7 @@ def saveCustomer(requestBody):
                 check_europe = user_check['country']['is_in_europe']
                 is_valid = True
                 is_in_europe = check_europe
-                running_status = 'ON'
+                running_status = requestBody.get('running_status')
                 isSubmitted = requestBody.get('isSubmitted')
 
                 # Save customer data only if API key is valid
