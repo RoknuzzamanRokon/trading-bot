@@ -488,9 +488,10 @@ def lambda_handler(event, context):
     valid_customer_ids = [item['customerId'] for item in response_for_valid_customer_from_table.get('Items', [])]
     
     if valid_customer_ids:
-        print(f"This are valid customer.{valid_customer_ids}")
+        # print(f"This are valid customer.{valid_customer_ids}")
         
         for customer_id in valid_customer_ids:
+            print("**********************************************************************************************************")
             print(f"I am valid customer: {customer_id} ")
 
             api_key = getValidCustomerItem(customerId=customer_id, attributeToSearch='api_key')
@@ -548,7 +549,7 @@ def lambda_handler(event, context):
             if 'body' in profit_count:
                 symbol_str = profit_count['body']
                 profit_count_strip = symbol_str.strip('\"')
-                print(f"profit profit check into db:---------------{profit_count_strip}")
+                # print(f"profit profit check into db:---------------{profit_count_strip}")
                 # print(type(profit_count_strip))
                 profit_count_strip_int = float(profit_count_strip)
                 # print(type(profit_count_strip_int))
@@ -560,7 +561,7 @@ def lambda_handler(event, context):
                 loss_count_strip = symbol_str.strip('\"')
                 loss_count_strip_int = float(loss_count_strip)
                 # print(type(loss_count_strip_int))
-                print(f"Loss profit check into db:---------------{loss_count_strip_int}")
+                # print(f"Loss profit check into db:---------------{loss_count_strip_int}")
 
             max_buy_count = getOrderConfig(customerId=customer_id, attributeToSearch='max_buy')
             if 'body' in max_buy_count:
@@ -588,26 +589,26 @@ def lambda_handler(event, context):
 
 
             buy_check = get_buy_counter(customerId=customer_id)
-            print(f"THis is buy check: {buy_check}")
+            # print(f"THis is buy check: {buy_check}")
             sell_check = get_sell_counter(customerId=customer_id)
-            print(f"THis is sell check: {sell_check}")
+            # print(f"THis is sell check: {sell_check}")
             
             
 
             # Add logic for entering trad.
             if running_status_body_strip == "ON": 
+                print("----------------------------------------------------------------------------")
+                print(f"My ID: {customer_id}")
                 symbol = symbol_str_strip
                 product_id = product_id_str_strip
-                
+                print(f"Hey, I'm {product_id} here.")
                 USD_Size = Decimal(USD_Size_strip)
                 print(f"USD SIZE: {USD_Size}")
                 btc_size = USD_Size
                 # sell_btc_size = btc_size + 0.06
 
 
-                print("----------------------------------------------------------------------------")
-                print(f"My ID: {customer_id}")
-                print(f"Hey, I'm {product_id} here.")
+                
                 buy_check = get_buy_counter(customerId=customer_id)
                 print("Get data form db buy:", buy_check)
                 sell_check = get_sell_counter(customerId=customer_id)
@@ -629,20 +630,20 @@ def lambda_handler(event, context):
                     update_buy_sell_counter(customerId,set_buy, set_sell, total_buy, total_sell, current_price, last_buySell_status)
             
                 get_current_price_db = get_current_price(customerId=customer_id)
-                print(type(get_current_price_db))
-                print(f"Get current price in DB: {get_current_price_db}")
+                # print(type(get_current_price_db))
+                # print(f"Get current price in DB: {get_current_price_db}")
                 
                 historical_prices = get_last_month_prices(symbol, api_key=api_key_body_strip)
                 # print(f"last month price: {historical_prices}")
                 # print(type(historical_prices))
                 moving_average = calculate_moving_average(historical_prices, window_size)
-                print(f'Moving Average: {moving_average}')
+                # print(f'Moving Average: {moving_average}')
 
                 closing_price_result = get_last_day_closing_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(f"Closing price: {closing_price_result} \n")
+                # print(f"Closing price: {closing_price_result} \n")
                 
                 update_price_result = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(f"Current Price: {update_price_result} \n")
+                # print(f"Current Price: {update_price_result} \n")
 
 
                 # profit_amount_default = 1.0
@@ -650,19 +651,19 @@ def lambda_handler(event, context):
 
 
                 trade_buy_amount = loss_amount(closing_price_result, loss_count_strip_int)
-                print(type(trade_buy_amount))
-                print(f"Buy Amount Price: {trade_buy_amount}")
+                # print(type(trade_buy_amount))
+                # print(f"Buy Amount Price: {trade_buy_amount}")
                 
                 if buy_check == 0:
                     trade_sell_amount = profit_amount(closing_price_result, profit_count_strip_int)
-                    print(f"Sell Amount Price: {trade_sell_amount} \n")
+                    # print(f"Sell Amount Price: {trade_sell_amount} \n")
                     
                 else:
                     trade_sell_amount = profit_amount(get_current_price_db, profit_count_strip_int)
-                    print(f"Sell Amount Price: {trade_sell_amount} \n")
+                    # print(f"Sell Amount Price: {trade_sell_amount} \n")
                     
                 closing_prices = get_last_60_closing_prices(coin_symbol=symbol, api_key=api_key_body_strip)
-                print(f"get_last_60_closing_prices: {closing_prices}")
+                # print(f"get_last_60_closing_prices: {closing_prices}")
                 if not isinstance(closing_prices, str):
                     
                     rsi = calculate_rsi(closing_prices, window_size_for_rsi)
@@ -683,12 +684,12 @@ def lambda_handler(event, context):
                 
                 
                 set_api_credentials(api_key_body_strip, api_secret_body_strip)
-                print(f"API credentials: {set_api_credentials}")
+                # print(f"API credentials: {set_api_credentials}")
 
-                print(f"api key: {api_key_body_strip}")
-                print(f"secret key: {api_secret_body_strip}")
-                print(f"Product Id : {product_id}")
-                print(type(product_id))
+                # print(f"api key: {api_key_body_strip}")
+                # print(f"secret key: {api_secret_body_strip}")
+                # print(f"Product Id : {product_id}")
+                # print(type(product_id))
                 # print(f"Sell btc size: {sell_btc_size}")
                 # print(type(sell_btc_size))
 
@@ -707,8 +708,8 @@ def lambda_handler(event, context):
                         total_sell += 0
                         
                         current_price = get_coinbase_price(coin_symbol=symbol, api_key=api_key_body_strip)
-                        print(f"Get current price from coinbase: {current_price}")
-                        print(type(current_price))
+                        # print(f"Get current price from coinbase: {current_price}")
+                        # print(type(current_price))
 
                         set_buy = 1
                         set_sell = 0
@@ -1226,4 +1227,4 @@ def getBotCounterResult(counter_id):
     except Exception as e:
         error_handle = logger.exception(f"{e}")
         return error_handle
-    
+     
