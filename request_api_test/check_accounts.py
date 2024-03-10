@@ -10,20 +10,12 @@ api_secret = os.environ.get('API_SECRET_2')
 client = Client(api_key, api_secret)
 
 try:
-    user = client.get_current_user()
-    print("API key is valid.")
-    print(user)
-
-    print(user['country'])
-    print(user['country']['is_in_europe'])
-
     # Get account IDs
     accounts = client.get_accounts()
-    print(accounts)
     # Print account IDs
     print("Account IDs:")
     for account in accounts['data']:
-        print(account['id'])
+        print(f"Account Name: {account['name']}, Account Id: {account['id']}, Balance: {account['balance']['amount']},Currency: {account['balance']['currency']}")
 
 except Exception as e:
-    print("API key is invalid. Error:", e)  
+    print("API key is invalid. Error:", e)
