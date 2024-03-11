@@ -1,83 +1,40 @@
-import requests
-import time
-import hashlib
-import hmac
-from enum import Enum
+from coinbase.wallet.client import Client
+from dotenv import load_dotenv
+import os
 
-class Method(Enum):
-    GET = 'GET'
-    POST = 'POST'
+load_dotenv()
 
-def get_latest_price(product_id):
-    base_url = 'https://api.pro.coinbase.com'
-    endpoint = f'/products/{product_id}/ticker'
-    
-    url = f'{base_url}{endpoint}'
-    response = requests.get(url)
-    
-    try:
-        response_json = response.json()
-        latest_price = response_json.get('price', None)
-        return float(latest_price) if latest_price else None
-    except ValueError:
-        print("Response Content:", response.content.decode('utf-8'))
-        return None
+api_key = os.environ.get('API_KEY_2')
+api_secret = os.environ.get('API_SECRET_2')
 
-def place_market_buy_order(api_key, api_secret, product_id, usd_amount):
-    base_url = 'https://api.pro.coinbase.com'
-    endpoint = '/orders'
-    
-    timestamp = str(int(time.time()))
-    message = f'{timestamp}{Method.POST.value}{endpoint}'
-    signature = hmac.new(api_secret.encode(), message.encode(), hashlib.sha256).hexdigest()
-
-    headers = {
-        'CB-ACCESS-KEY': api_key,
-        'CB-ACCESS-SIGN': signature,
-        'CB-ACCESS-TIMESTAMP': timestamp,
-        'Content-Type': 'application/json',
-    }
-
-    latest_price = get_latest_price(product_id)
-    
-    if latest_price:
-        # Calculate the equivalent BTC amount based on the USD amount and the latest price
-        btc_amount = usd_amount / latest_price
-
-        order_data = {
-            'size': str(btc_amount),
-            'side': 'buy',
-            'product_id': product_id,
-            'type': 'market',  # Set order type to 'market' for a market order
-        }
-
-        url = f'{base_url}{endpoint}'
-        response = requests.post(url, headers=headers, json=order_data)
-        
-        try:
-            response_json = response.json()
-            print("Buy Order Response:", response_json)
-            return response_json
-        except ValueError:
-            print("Response Content:", response.content.decode('utf-8'))
-            return None
-
-    return None
-
-# Example usage
-api_key = ''
-api_secret = ''
-product_id = 'BTC-USD'
-usd_amount_to_spend = 10.0
+client = Client(api_key, api_secret)
 
 try:
-    market_buy_order_response = place_market_buy_order(api_key, api_secret, product_id, usd_amount_to_spend)
-    print("Market Buy Order Response:")
-    print(market_buy_order_response)
+    # Get account IDs
+    accounts = client.get_accounts()
+
+    # Choose the account where you want to place the market order
+    account_id = accounts['data'][0]['id']  # Replace with your preferred account ID
+
+    # Specify order details with account_id included
+    order_params = {
+        'funds': '10',  # Replace with the amount in USD you want to buy/sell
+        'side': 'buy',  # 'buy' for buying, 'sell' for selling
+        'product_id': 'BTC-USD',  # Replace with the trading pair you are interested in
+        'type': 'market',  # Specify the order type as 'market'
+        'account_id': account_id,  # Include the account_id parameter
+    }
+
+    # Place the market order
+    order = client.create_order(**order_params)
+
+    # Print order details
+    print("Market Order Placed:")
+    print(f"Order ID: {order['id']}")
+    print(f"Status: {order['status']}")
+    print(f"Side: {order['side']}")
+    print(f"Funds: {order['funds']}")
+    print(f"Time in Force: {order.get('time_in_force', 'N/A')}")
+
 except Exception as e:
-    print("Error:", e)
-    if hasattr(e, 'response') and e.response is not None:
-        print("Detailed Response:")
-        print("Status Code:", e.response.status_code)
-        print("Headers:", e.response.headers)
-        print("Response Content:", e.response.content.decode('utf-8'))
+    print("API key is invalid or there was an error placing the order. Error:", e)

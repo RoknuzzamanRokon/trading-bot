@@ -6,8 +6,8 @@ import time
 
 # Load API key and secret from environment variables
 load_dotenv()
-API_KEY = os.getenv('API_KEY')
-API_SECRET = os.getenv('API_SECRET')
+API_KEY = os.getenv('API_KEY_1')
+API_SECRET = os.getenv('API_SECRET_1')
 API_PASSPHRASE = os.getenv('API_PASSPHRASE')
 
 # Specify the product ID (e.g., 'BTC-USD' for Bitcoin to US Dollar)
@@ -69,4 +69,4 @@ def place_market_order(product_id, side, funds):
         print(f"Failed to place market order. Status code: {response.status_code}, Response: {response.json()}")
 
 # Example: Place a market buy order for $10
-place_market_order(product_id, 'buy', 10)
+place_market_order(product_id, 'buy', 5)

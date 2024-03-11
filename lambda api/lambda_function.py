@@ -598,9 +598,14 @@ def lambda_handler(event, context):
             # Add logic for entering trad.
             if running_status_body_strip == "ON": 
                 print("----------------------------------------------------------------------------")
+                product_id = product_id_str_strip
+                p = "BTC-USDC"
+                if p == product_id:
+                    print("same")
+                print(p)
                 print(f"My ID: {customer_id}")
                 symbol = symbol_str_strip
-                product_id = product_id_str_strip
+                
                 print(f"Hey, I'm {product_id} here.")
                 USD_Size = Decimal(USD_Size_strip)
                 print(f"USD SIZE: {USD_Size}")
@@ -668,11 +673,12 @@ def lambda_handler(event, context):
                     
                     rsi = calculate_rsi(closing_prices, window_size_for_rsi)
                     print(f'The RSI for the result candle prices per minute is: {rsi}')
-                
+                    
+                decimal_value_closing_price_result = Decimal(closing_price_result)
                 customerId = customer_id
                 # Rounded all value in 2 decimal places.
                 round_moving_average = round(moving_average, 2)
-                round_closing_price_result = round(closing_price_result, 2)
+                round_closing_price_result = round(decimal_value_closing_price_result, 2)
                 round_trade_buy_amount = round(trade_buy_amount, 2)
                 round_trade_sell_amount = round(trade_sell_amount, 2)
                 round_rsi = round(rsi, 2)
@@ -697,13 +703,14 @@ def lambda_handler(event, context):
                     update_price_float = float(update_price_result)
                     if total_buy < max_buy and rsi <= 30 and buy_check == 0:
 
-                        set_api_credentials(api_key_body_strip, api_secret_body_strip) 
+                        # set_api_credentials(api_key_body_strip, api_secret_body_strip) 
                         # fiat_limit_buy(product_id, btc_size)
                         product = product_id
+                        print(type(product))
                         btc_size = USD_Size
                         fiat_market_buy(product, btc_size)
 
-                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~') 
+                        print('~~~~~~~~~~~~~~~**************************************~~~~~~~~~~~~~~~~~~Buy~~~~~~~~~~~~~~~~~************************~~~~~~~~~~~~~~~~~~~~') 
                         total_buy += 1
                         total_sell += 0
                         
@@ -723,14 +730,14 @@ def lambda_handler(event, context):
 
                     elif total_sell < max_sell and buy_check > 0 and trade_sell_amount <= update_price_float:
 
-                        set_api_credentials(api_key_body_strip, api_secret_body_strip)
+                        # set_api_credentials(api_key_body_strip, api_secret_body_strip)
 
                         # fiat_limit_sell(product_id, btc_size)
                         product = product_id
                         btc_size = USD_Size
                         fiat_market_sell(product, btc_size)
 
-                        print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
+                        print('~~~~~~~~~~~~~~~~~~*********************************~~~~~~~~~~~~~~~~Sell~~~~~~~~~~~~~~~~~~~****************************~~~~~~~~~~~~~~~~')
 
                         total_buy += 0
                         total_sell += 1
@@ -1227,4 +1234,4 @@ def getBotCounterResult(counter_id):
     except Exception as e:
         error_handle = logger.exception(f"{e}")
         return error_handle
-     
+    
