@@ -4,8 +4,8 @@ import os
 
 load_dotenv()
 
-api_key = os.environ.get('API_KEY_2')
-api_secret = os.environ.get('API_SECRET_2')
+api_key = os.environ.get('API_KEY_5')
+api_secret = os.environ.get('API_SECRET_5')
 
 client = Client(api_key, api_secret)
 

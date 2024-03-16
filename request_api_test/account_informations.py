@@ -6,8 +6,8 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-API_KEY = os.environ.get('API_KEY_2')
-API_SECRET = os.environ.get('API_SECRET_2')
+API_KEY = os.environ.get('API_KEY_5')
+API_SECRET = os.environ.get('API_SECRET_5')
 
 def generate_signature(timestamp, method, request_path, body=''):
     message = f"{timestamp}{method}{request_path}{body}"
