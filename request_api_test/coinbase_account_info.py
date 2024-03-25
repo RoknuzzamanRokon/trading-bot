@@ -25,16 +25,16 @@ def get_account_info():
         print(f"Exchange Error: {e}")
 
 # Call the function to get account information
-get_account_info()
+# get_account_info()
 
 balance = exchange.fetch_balance()
 
 # Print account balance
-print(balance)
+# print(balance)
 
 
 # Get trade history for the authenticated user
-my_trades = exchange.fetch_my_trades('BTC/USD')
+my_trades = exchange.fetch_my_trades('BTC/USDC')
 print(my_trades)
 
 
